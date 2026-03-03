@@ -1,0 +1,772 @@
+/**
+ * LearningPath — curriculum page with expandable session rows and sticky player.
+ *
+ * Session row: click to expand/collapse  |  play button → opens video player.
+ * Expanded (seal):   seal image + description + key concepts + time links.
+ * Expanded (other):  topic text + "הפעל מפגש" button.
+ * Player sidebar:    seal info + time links  OR  session title + subtitle + summary.
+ */
+
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import { useLearningPath, useLectures, useSeals, useLectureMetadata } from '@/hooks/useData';
+import { useSealLectureData } from '@/hooks/useSealLectureData';
+import { createPageUrl } from '@/utils';
+import VideoPlayer from '@/components/player/VideoPlayer';
+import { toSeconds, getVideoUrl } from '@/components/player/utils';
+import { Play, BookOpen, Zap, Star, Sparkles, ExternalLink, X, ChevronDown, Loader2 } from 'lucide-react';
+import { TerminologyDialog } from '@/components/shared/TerminologyDialog';
+import { AnnotatedText, annotateChildren } from '@/components/shared/AnnotatedText';
+import { THEORY_KNOWLEDGE } from '@/data/theory-knowledge';
+
+const MARKDOWN_COMPONENTS = {
+  h2: ({ children }) => (
+    <h2 className="text-sm font-bold text-foreground mt-5 mb-1.5 first:mt-0">{annotateChildren(children)}</h2>
+  ),
+  h3: ({ children }) => (
+    <p className="text-xs font-semibold text-purple-700 mt-2.5 mb-1">{annotateChildren(children)}</p>
+  ),
+  hr: () => <hr className="border-border/30 my-3" />,
+  p: ({ children }) => (
+    <p className="text-xs leading-relaxed mb-1.5 text-muted-foreground">{annotateChildren(children)}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="text-xs space-y-0.5 mb-1.5 pr-3">{children}</ul>
+  ),
+  li: ({ children }) => (
+    <li className="text-xs leading-relaxed list-disc text-muted-foreground">{annotateChildren(children)}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{annotateChildren(children)}</strong>
+  ),
+};
+
+const TYPE_CONFIG = {
+  theory:     { icon: BookOpen, label: 'תיאוריה', color: 'bg-blue-500/10 text-blue-700 border-blue-500/20',   activeColor: 'bg-blue-600 text-white border-blue-600' },
+  practice:   { icon: Play,     label: 'תרגול',   color: 'bg-green-500/10 text-green-700 border-green-500/20', activeColor: 'bg-green-600 text-white border-green-600' },
+  initiation: { icon: Zap,      label: 'חניכה',   color: 'bg-amber-500/10 text-amber-700 border-amber-500/20', activeColor: 'bg-amber-500 text-white border-amber-500' },
+  seal:       { icon: Star,     label: 'חותם',    color: 'bg-purple-500/10 text-purple-700 border-purple-500/20', activeColor: 'bg-purple-600 text-white border-purple-600' },
+};
+
+function parseTitleForDisplay(titleHe) {
+  const inner = titleHe.match(/^שיעור (\d+):\s+שיעור (\d+)\s*[-—]\s*(.+)$/);
+  if (inner) return { num: inner[2], desc: inner[3], origLabel: `שיעור ${inner[1]}` };
+  const outer = titleHe.match(/^שיעור (\d+):\s*(.+)$/);
+  if (outer) return { num: outer[1], desc: outer[2], origLabel: null };
+  return { num: null, desc: titleHe, origLabel: null };
+}
+
+function shortDesc(text) {
+  if (!text) return '';
+  const s = text.match(/^.{20,150}[.。,]/)?.[0];
+  return s || (text.length > 150 ? text.slice(0, 150) + '…' : text);
+}
+
+// ─── KnowledgeSection ────────────────────────────────────────────────────────
+
+function KnowledgeSection() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <section>
+      {/* Header */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded((e) => !e)}
+        onKeyDown={(e) => e.key === 'Enter' && setExpanded((v) => !v)}
+        className="mb-2 pb-2 border-b border-border cursor-pointer hover:bg-accent/30 transition select-none -mx-1 px-1 rounded"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold leading-snug">
+              <span className="text-blue-600 font-bold text-base">ידע תיאורטי</span>
+              <span className="text-foreground">: סיכום הקורס</span>
+            </h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+              ספירות, שמות קדושים, מנגנון החותמות ועקרונות הקבלה המעשית
+            </p>
+          </div>
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </div>
+
+      {/* Expandable content */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="knowledge-content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="border border-blue-500/20 rounded-lg bg-blue-500/5 px-5 py-4" dir="rtl">
+              <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                {THEORY_KNOWLEDGE}
+              </ReactMarkdown>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+// ─── SessionRow ──────────────────────────────────────────────────────────────
+
+function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const seal = session.sealNumber
+    ? (seals.find((s) => s.number === session.sealNumber) || null)
+    : null;
+
+  // Seal metadata — loaded only when expanded and is a seal session
+  const {
+    sealMeta,
+    essenceMarkdown,
+    activationMarkdown,
+    isLoading: sealMetaLoading,
+  } = useSealLectureData(
+    session.sealNumber || null,
+    seal?.imageUrl || null,
+    expanded && !!seal,
+  );
+
+  // Lecture metadata — loaded for non-seal sessions when expanded
+  const { data: lectureData } = useLectureMetadata(
+    expanded && !seal ? session.lectureBasename : null,
+  );
+
+  const config = TYPE_CONFIG[session.type] || TYPE_CONFIG.theory;
+  const Icon   = config.icon;
+
+  // Markdown components with time-link interception (for summary timestamps)
+  const markdownComponents = useMemo(() => ({
+    ...MARKDOWN_COMPONENTS,
+    a: ({ href, children }) => {
+      const timeMatch = href?.match(/^#t=(\d+:\d+:\d+)$/);
+      if (timeMatch) {
+        return (
+          <button
+            onClick={() => onPlay(session, timeMatch[1])}
+            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+          >
+            {children}
+          </button>
+        );
+      }
+      return <a href={href} className="text-primary underline">{children}</a>;
+    },
+  }), [onPlay, session]);
+
+  return (
+    <div className={isPlaying ? 'bg-primary/5 border-r-2 border-r-primary' : ''}>
+
+      {/* ── Collapsed row ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded((e) => !e)}
+        onKeyDown={(e) => e.key === 'Enter' && setExpanded((v) => !v)}
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent/50 transition select-none"
+        dir="rtl"
+      >
+        {/* Session label */}
+        <span className="text-[10px] text-muted-foreground font-mono w-6 shrink-0 text-center">
+          {sessionLabel}
+        </span>
+
+        {/* Seal thumbnail */}
+        {seal?.imageUrl && (
+          <img
+            src={seal.imageUrl}
+            alt={seal.name}
+            className="w-8 h-8 object-contain rounded bg-muted p-0.5 shrink-0"
+          />
+        )}
+
+        {/* Title + topic — takes up remaining space */}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm leading-tight">
+            <AnnotatedText text={session.title} />
+          </p>
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-relaxed">
+            <AnnotatedText text={session.topic} />
+          </p>
+        </div>
+
+        {/* Play button — right after title, before type badge */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onPlay(session, undefined); }}
+          className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
+          title="הפעל מפגש"
+        >
+          <Play className="w-3 h-3 fill-current" style={{ transform: 'scaleX(-1)' }} />
+          <span className="hidden sm:inline">הפעל</span>
+        </button>
+
+        {/* Type badge — per-type color */}
+        <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${config.color}`}>
+          <Icon className="w-3 h-3" />
+          <span className="hidden sm:inline">{config.label}</span>
+        </span>
+
+        {/* Expand chevron */}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        />
+      </div>
+
+      {/* ── Expanded content — seamless continuation, slides down ── */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="expanded"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-4 pb-4 pt-1" dir="rtl">
+              {seal ? (
+
+                /* ── Seal session: full seal data + markdown content ── */
+                <div className="space-y-3">
+
+                  {/* Seal header: image + names */}
+                  <div className="flex gap-3">
+                    {seal.imageUrl && (
+                      <img
+                        src={seal.imageUrl}
+                        alt={seal.name}
+                        className="w-16 h-16 object-contain rounded border border-border bg-background p-0.5 shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="font-bold text-sm leading-tight"><AnnotatedText text={seal.purposeSummary} /></p>
+                      {seal.content?.mainTitle && (
+                        <p className="text-xs text-muted-foreground font-medium"><AnnotatedText text={seal.content.mainTitle} /></p>
+                      )}
+                      {seal.content?.sealTitle && (
+                        <p className="text-xs text-primary">{seal.content.sealTitle}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Full description */}
+                  {seal.content?.description && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      <AnnotatedText text={seal.content.description} />
+                    </p>
+                  )}
+
+                  {/* Qualities (סגולות) */}
+                  {seal.content?.qualities?.length > 0 && (
+                    <div className="space-y-0.5">
+                      {seal.content.qualities.map((q) => (
+                        <p key={q.name} className="text-xs">
+                          <span className="font-semibold"><AnnotatedText text={q.name} /></span>
+                          {q.explanation && (
+                            <span className="text-muted-foreground"> — <AnnotatedText text={q.explanation} /></span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Side attributes (שמות) */}
+                  {seal.content?.sideAttributes?.length > 0 && (
+                    <div className="space-y-0.5">
+                      {seal.content.sideAttributes.map((a) => (
+                        <p key={a.name} className="text-xs">
+                          <span className="font-semibold"><AnnotatedText text={a.name} /></span>
+                          {a.explanation && (
+                            <span className="text-muted-foreground"> — <AnnotatedText text={a.explanation} /></span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Key concepts tags */}
+                  {seal.keyConcepts?.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {seal.keyConcepts.map((k) => (
+                        <span key={k} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Lecture content from metadata */}
+                  {sealMetaLoading ? (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>טוען תוכן...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {essenceMarkdown && (
+                        <div className="border-t border-border/40 pt-2">
+                          <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                            {essenceMarkdown}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                      {activationMarkdown && (
+                        <div className="border-t border-border/40 pt-2">
+                          <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                            {activationMarkdown}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+
+                      {/* Video time links */}
+                      {sealMeta && (
+                        <div className="flex flex-wrap gap-3 text-xs pt-1">
+                          {sealMeta.hatmaaTime && (
+                            <button
+                              onClick={() => onPlay(session, sealMeta.hatmaaTime.startTime, sealMeta.hatmaaTime)}
+                              className="flex items-center gap-1 text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                            >
+                              <Play className="w-2.5 h-2.5 fill-current" /> הטמעה
+                            </button>
+                          )}
+                          {sealMeta.explanationTime && (
+                            <button
+                              onClick={() => onPlay(session, sealMeta.explanationTime.startTime, sealMeta.explanationTime)}
+                              className="flex items-center gap-1 text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                            >
+                              <Play className="w-2.5 h-2.5 fill-current" /> הסבר
+                            </button>
+                          )}
+                          {sealMeta.fullRange && (
+                            <button
+                              onClick={() => onPlay(session, sealMeta.fullRange.startTime, sealMeta.fullRange)}
+                              className="flex items-center gap-1 text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                            >
+                              <Play className="w-2.5 h-2.5 fill-current" /> כל הקטע
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+              ) : (
+
+                /* ── Theory / practice / initiation: full lecture summary ── */
+                <div className="text-right">
+                  {lectureData?.summary?.he ? (
+                    <ReactMarkdown components={markdownComponents}>
+                      {lectureData.summary.he}
+                    </ReactMarkdown>
+                  ) : lectureData?.lecture?.description?.he ? (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {lectureData.lecture.description.he}
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>טוען תוכן...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── LearningPath (main) ─────────────────────────────────────────────────────
+
+export default function LearningPath() {
+  const sessions = useLearningPath();
+  const lectures = useLectures();
+  const seals    = useSeals();
+
+  const [selectedSession, setSelectedSession]   = useState(null);
+  const [seekRevision, setSeekRevision]         = useState(0);
+  const [seekTime, setSeekTime]                 = useState(undefined);
+  const [activeFilter, setActiveFilter]         = useState(null);
+  const [selectedHighlight, setSelectedHighlight] = useState(null); // { startTime, endTime } in seconds
+  // Map<basename, boolean> — explicit user overrides for collapsed state.
+  // Default (when no override): first group expanded, rest collapsed.
+  // When a filter is active (activeFilter !== null): all groups expanded by default.
+  const [groupOverrides, setGroupOverrides]     = useState(new Map());
+  const playerRef = useRef(null);
+
+  const toggleGroup = useCallback((basename, groupIdx) => {
+    setGroupOverrides((prev) => {
+      const currentlyCollapsed = prev.has(basename)
+        ? prev.get(basename)
+        : (activeFilter ? false : groupIdx > 0);
+      const next = new Map(prev);
+      next.set(basename, !currentlyCollapsed);
+      return next;
+    });
+  }, [activeFilter]);
+
+  const groups = useMemo(() => {
+    const map = new Map();
+    sessions.forEach((s) => {
+      if (!map.has(s.lectureBasename)) map.set(s.lectureBasename, []);
+      map.get(s.lectureBasename).push(s);
+    });
+    return [...map.entries()].map(([basename, groupSessions]) => ({ basename, sessions: groupSessions }));
+  }, [sessions]);
+
+  const filteredGroups = useMemo(() => {
+    if (!activeFilter) return groups;
+    return groups
+      .map(({ basename, sessions: gs }) => ({
+        basename,
+        sessions: gs.filter((s) => s.type === activeFilter),
+      }))
+      .filter(({ sessions: gs }) => gs.length > 0);
+  }, [groups, activeFilter]);
+
+  const filteredCount = useMemo(
+    () => filteredGroups.reduce((acc, g) => acc + g.sessions.length, 0),
+    [filteredGroups],
+  );
+
+  // Seal data for the currently playing session (video panel sidebar)
+  const selectedSeal = useMemo(
+    () => (selectedSession?.sealNumber
+      ? seals.find((s) => s.number === selectedSession.sealNumber) || null
+      : null),
+    [selectedSession, seals],
+  );
+
+  const { sealMeta: selectedSealMeta } = useSealLectureData(
+    selectedSession?.sealNumber || null,
+    selectedSeal?.imageUrl || null,
+    !!selectedSeal,
+  );
+
+  const highlightRanges = useMemo(() => {
+    const range = selectedHighlight ?? (selectedSealMeta?.fullRange
+      ? { startTime: toSeconds(selectedSealMeta.fullRange.startTime), endTime: toSeconds(selectedSealMeta.fullRange.endTime) }
+      : null);
+    if (!range) return [];
+    return [{ startTime: range.startTime, endTime: range.endTime, color: 'rgba(168,85,247,0.35)' }];
+  }, [selectedHighlight, selectedSealMeta]);
+
+  const playerKey = selectedSession
+    ? `${selectedSession.lectureBasename}-${seekRevision}`
+    : 'none';
+
+  // onPlay: called by SessionRow when user clicks a play or time-link button
+  // highlightRange (optional): { startTime, endTime } strings — overrides default fullRange highlight
+  const handlePlay = useCallback((session, seekTimeStr, highlightRange) => {
+    const isNewLecture = session.lectureBasename !== selectedSession?.lectureBasename;
+    setSelectedSession(session);
+    setSelectedHighlight(highlightRange
+      ? { startTime: toSeconds(highlightRange.startTime), endTime: toSeconds(highlightRange.endTime) }
+      : null,
+    );
+
+    if (seekTimeStr !== undefined) {
+      setSeekTime(toSeconds(seekTimeStr));
+      setSeekRevision((r) => r + 1);
+    } else if (isNewLecture) {
+      setSeekTime(undefined);
+      setSeekRevision(0);
+    }
+
+    setTimeout(() => {
+      playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 80);
+  }, [selectedSession]);
+
+  // Called from the player panel sidebar time-links
+  const handleSeek = useCallback((timeStr, highlightRange) => {
+    setSeekTime(toSeconds(timeStr));
+    setSeekRevision((r) => r + 1);
+    setSelectedHighlight(highlightRange
+      ? { startTime: toSeconds(highlightRange.startTime), endTime: toSeconds(highlightRange.endTime) }
+      : null,
+    );
+  }, []);
+
+  const handleClose = useCallback(() => setSelectedSession(null), []);
+
+  const selectedLecture = useMemo(
+    () => lectures.find((l) => l.basename === selectedSession?.lectureBasename) || null,
+    [lectures, selectedSession],
+  );
+
+  return (
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+
+      {/* Header */}
+      <header className="space-y-2 text-center">
+        <Sparkles className="w-8 h-8 text-primary mx-auto" />
+        <h1 className="text-2xl sm:text-3xl font-bold">מסלול לימוד</h1>
+        <p className="text-muted-foreground text-sm">
+          {activeFilter ? `${filteredCount} מתוך ${sessions.length} מפגשים` : `${sessions.length} מפגשים`}
+          {' '}— מתיאוריה בסיסית ועד צריבת חותמות מתקדמת
+        </p>
+
+        {/* Filter pills + terminology */}
+        <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">
+          {/* Type filter pills */}
+          <button
+            onClick={() => { setActiveFilter(null); setGroupOverrides(new Map()); }}
+            className={`text-xs px-2.5 py-1 rounded-full border transition ${
+              activeFilter === null
+                ? 'bg-foreground text-background border-foreground'
+                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+            }`}
+          >
+            הכל
+          </button>
+          {Object.entries(TYPE_CONFIG).map(([type, config]) => {
+            const PillIcon = config.icon;
+            const isActive = activeFilter === type;
+            return (
+              <button
+                key={type}
+                onClick={() => { setActiveFilter(isActive ? null : type); setGroupOverrides(new Map()); }}
+                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition font-medium ${
+                  isActive ? config.activeColor : config.color
+                }`}
+              >
+                <PillIcon className="w-3 h-3" />
+                {config.label}
+              </button>
+            );
+          })}
+
+          {/* Divider */}
+          <div className="w-px h-4 bg-border mx-0.5" />
+
+          {/* Terminology dialog */}
+          <TerminologyDialog
+            trigger={
+              <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-3 py-1 rounded-full border border-border hover:border-primary/40 hover:bg-accent transition">
+                <BookOpen className="w-3.5 h-3.5" />
+                מילון מונחים
+              </button>
+            }
+          />
+        </div>
+      </header>
+
+      {/* Session groups */}
+      <div className="space-y-8" dir="rtl">
+
+        {/* Theory knowledge section */}
+        <KnowledgeSection />
+
+        {filteredGroups.map(({ basename, sessions: groupSessions }, groupIdx) => {
+          const lecture = lectures.find((l) => l.basename === basename);
+          if (!lecture) return null;
+          const { num, desc, origLabel } = parseTitleForDisplay(lecture.title.he);
+          const isCollapsed = groupOverrides.has(basename)
+            ? groupOverrides.get(basename)
+            : (activeFilter ? false : groupIdx > 0);
+
+          return (
+            <section key={basename}>
+              {/* Lecture header — clickable to collapse/expand */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleGroup(basename, groupIdx)}
+                onKeyDown={(e) => e.key === 'Enter' && toggleGroup(basename, groupIdx)}
+                className="mb-2 pb-2 border-b border-border cursor-pointer hover:bg-accent/30 transition select-none -mx-1 px-1 rounded"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <h2 className="text-sm font-semibold leading-snug">
+                        <span className="text-primary font-bold text-base">שיעור {num}</span>
+                        {desc && <>: <span>{desc}</span></>}
+                      </h2>
+                      {origLabel && (
+                        <span className="text-[11px] text-muted-foreground">({origLabel})</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                      {shortDesc(lecture.description?.he)}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                  />
+                </div>
+              </div>
+
+              {/* Session rows with collapse animation */}
+              <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                  <motion.div
+                    key="sessions"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="border border-border rounded-lg overflow-hidden divide-y divide-border/60">
+                      {groupSessions.map((session, sessionIdx) => (
+                        <SessionRow
+                          key={session.session}
+                          session={session}
+                          sessionLabel={`${num}.${sessionIdx + 1}`}
+                          seals={seals}
+                          isPlaying={selectedSession?.session === session.session}
+                          onPlay={handlePlay}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+          );
+        })}
+      </div>
+
+      {/* Sticky player panel */}
+      {selectedSession && (
+        <div
+          ref={playerRef}
+          className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.12)]"
+        >
+          <div className="max-w-4xl mx-auto space-y-2">
+
+            {/* Title bar — X on visual right (first in RTL), title fills left */}
+            <div className="flex items-center gap-2" dir="rtl">
+              <button
+                onClick={handleClose}
+                className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                aria-label="סגור נגן"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <p className="flex-1 text-xs font-medium text-foreground/80 truncate min-w-0">
+                {selectedSession.title}
+                {selectedSession.topic && (
+                  <span className="text-muted-foreground font-normal"> — {selectedSession.topic}</span>
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4" dir="rtl">
+
+              {/* Side panel */}
+              <div className="sm:w-[220px] shrink-0 flex flex-col gap-2">
+                {selectedSeal ? (
+                  /* Seal session */
+                  <>
+                    <div className="flex items-start gap-2">
+                      {selectedSeal.imageUrl && (
+                        <img
+                          src={selectedSeal.imageUrl}
+                          alt={selectedSeal.name}
+                          className="w-16 h-16 object-contain rounded bg-muted p-0.5 shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm leading-tight">{selectedSeal.purposeSummary}</p>
+                        <p className="text-xs text-primary mt-0.5">{selectedSeal.content?.sealTitle}</p>
+                      </div>
+                    </div>
+                    {selectedSeal.keyConcepts?.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground line-clamp-2">
+                        {selectedSeal.keyConcepts.join(' · ')}
+                      </p>
+                    )}
+                    {selectedSealMeta && (
+                      <div className="flex gap-3 text-xs flex-wrap">
+                        {selectedSealMeta.hatmaaTime && (
+                          <button
+                            onClick={() => handleSeek(selectedSealMeta.hatmaaTime.startTime, selectedSealMeta.hatmaaTime)}
+                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                          >
+                            הטמעה
+                          </button>
+                        )}
+                        {selectedSealMeta.explanationTime && (
+                          <button
+                            onClick={() => handleSeek(selectedSealMeta.explanationTime.startTime, selectedSealMeta.explanationTime)}
+                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                          >
+                            הסבר
+                          </button>
+                        )}
+                        {selectedSealMeta.fullRange && (
+                          <button
+                            onClick={() => handleSeek(selectedSealMeta.fullRange.startTime, selectedSealMeta.fullRange)}
+                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                          >
+                            כל הקטע
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <Link
+                      to={createPageUrl('SealDetail') + `?id=${selectedSeal.id}`}
+                      className="text-xs text-primary hover:underline flex items-center gap-1 mt-auto"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      פרטי החותם
+                    </Link>
+                  </>
+                ) : (
+                  /* Non-seal session */
+                  <>
+                    <div>
+                      <p className="font-semibold text-sm leading-snug">{selectedSession.title}</p>
+                      <p className="text-xs text-primary mt-0.5">{selectedSession.topic}</p>
+                    </div>
+                    {selectedLecture && (
+                      <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-4">
+                        {shortDesc(selectedLecture.description?.he)}
+                      </p>
+                    )}
+                    <Link
+                      to={createPageUrl('LectureDetail') + `?lecture=${selectedSession.lectureBasename}`}
+                      className="text-xs text-primary hover:underline flex items-center gap-1 mt-auto"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      פתח שיעור מלא
+                    </Link>
+                  </>
+                )}
+              </div>
+
+              {/* Video player */}
+              <div className="flex-1 min-w-0">
+                <VideoPlayer
+                  key={playerKey}
+                  videoUrl={getVideoUrl(selectedSession.lectureBasename)}
+                  subtitleBasename={selectedSession.lectureBasename}
+                  startTime={seekTime}
+                  highlightRanges={highlightRanges}
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

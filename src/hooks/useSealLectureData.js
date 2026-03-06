@@ -71,7 +71,7 @@ export function useSealLectureData(sealNumber, imageUrl, enabled) {
   const result = useMemo(() => {
     if (!metadata || !metadata.seals) {
       return {
-        sealMeta: null, hatmaa: null, lectureBasename, isLoading,
+        sealMeta: null, hatmaa: null, lectureName: null, lectureBasename, isLoading,
         hasData: false, essenceMarkdown: '', activationMarkdown: '',
       };
     }
@@ -97,6 +97,7 @@ export function useSealLectureData(sealNumber, imageUrl, enabled) {
     return {
       sealMeta,
       hatmaa,
+      lectureName: metadata?.lecture?.name?.he || null,
       lectureBasename,
       isLoading: false,
       hasData: !!sealMeta,
@@ -107,14 +108,14 @@ export function useSealLectureData(sealNumber, imageUrl, enabled) {
 
   if (!enabled) {
     return {
-      sealMeta: null, hatmaa: null, lectureBasename: null,
+      sealMeta: null, hatmaa: null, lectureName: null, lectureBasename: null,
       isLoading: false, hasData: false, essenceMarkdown: '', activationMarkdown: '',
     };
   }
 
   if (isLoading) {
     return {
-      sealMeta: null, hatmaa: null, lectureBasename,
+      sealMeta: null, hatmaa: null, lectureName: null, lectureBasename,
       isLoading: true, hasData: false, essenceMarkdown: '', activationMarkdown: '',
     };
   }

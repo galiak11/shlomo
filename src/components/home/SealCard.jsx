@@ -89,7 +89,7 @@ export default function SealCard({ seal, onOpenHatmaa, animSpeed = 'fast' }) {
   // Only load lecture data when card is expanded and seal has lecture data
   const hasLecture = sealHasLectureData(seal.number);
   const {
-    sealMeta, hatmaa, lectureBasename,
+    sealMeta, hatmaa, lectureName, lectureBasename,
     isLoading: lectureLoading, hasData,
     essenceMarkdown, activationMarkdown,
   } = useSealLectureData(seal.number, seal.imageUrl, isExpanded && hasLecture);
@@ -187,6 +187,7 @@ export default function SealCard({ seal, onOpenHatmaa, animSpeed = 'fast' }) {
         seal,
         sealMeta,
         hatmaa,
+        lectureName,
         lectureBasename,
         seekTime: toSeconds(timeRange.startTime),
         highlightRange: {
@@ -196,7 +197,7 @@ export default function SealCard({ seal, onOpenHatmaa, animSpeed = 'fast' }) {
         view,
       });
     },
-    [seal, sealMeta, hatmaa, lectureBasename, onOpenHatmaa],
+    [seal, sealMeta, hatmaa, lectureName, lectureBasename, onOpenHatmaa],
   );
 
   // Handle #t= timestamp links from markdown — open modal at that time
@@ -207,6 +208,7 @@ export default function SealCard({ seal, onOpenHatmaa, animSpeed = 'fast' }) {
         seal,
         sealMeta,
         hatmaa,
+        lectureName,
         lectureBasename,
         seekTime: toSeconds(startTime),
         highlightRange: endTime
@@ -215,7 +217,7 @@ export default function SealCard({ seal, onOpenHatmaa, animSpeed = 'fast' }) {
         view: 'full',
       });
     },
-    [seal, sealMeta, hatmaa, lectureBasename, onOpenHatmaa],
+    [seal, sealMeta, hatmaa, lectureName, lectureBasename, onOpenHatmaa],
   );
 
   return (

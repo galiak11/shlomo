@@ -754,6 +754,11 @@ export default function LearningPath() {
 
               {/* Video player */}
               <div className="flex-1 min-w-0">
+                {selectedLecture?.title?.he && (
+                  <p className="text-xs text-center text-muted-foreground mb-1.5 truncate">
+                    {selectedLecture.title.he.replace(/^שיעור \d+:\s+/, '')}
+                  </p>
+                )}
                 <VideoPlayer
                   key={playerKey}
                   videoUrl={getVideoUrl(selectedSession.lectureBasename)}

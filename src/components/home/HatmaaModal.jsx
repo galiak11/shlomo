@@ -25,6 +25,13 @@ import { toSeconds, getVideoUrl } from '@/components/player/utils';
 import { splitDetailsMarkdown } from '@/hooks/useSealLectureData';
 import ReactMarkdown from 'react-markdown';
 
+/** Strip outer "שיעור N: " prefix from metadata lecture names. */
+function formatLectureName(name) {
+  if (!name) return null;
+  const match = name.match(/^שיעור \d+:\s+(.+)$/);
+  return match ? match[1] : name;
+}
+
 /** Build ReactMarkdown component overrides for modal display.
  *  onTimestamp(startTime, endTime) is called when a #t= link is clicked. */
 function buildModalMdComponents(onTimestamp) {
@@ -67,6 +74,7 @@ export default function HatmaaModal({
   seal,
   sealMeta,
   hatmaa,
+  lectureName,
   lectureBasename,
   seekTime,
   highlightRange,
@@ -248,6 +256,11 @@ export default function HatmaaModal({
                 ref={videoContainerRef}
                 className={seal.imageUrl ? 'w-2/3' : 'w-full'}
               >
+                {lectureName && (
+                  <p className="text-xs text-center text-muted-foreground mb-1.5 truncate">
+                    {formatLectureName(lectureName)}
+                  </p>
+                )}
                 {lectureBasename && (
                   <VideoPlayer
                     key={`${lectureBasename}-${playerKeyRef.current}`}

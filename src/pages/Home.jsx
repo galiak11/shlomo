@@ -73,6 +73,7 @@ export default function Home() {
       seal: urlSealObj,
       sealMeta,
       hatmaa: urlLectureData.hatmaa,
+      lectureName: urlLectureData.lectureName,
       lectureBasename: urlLectureData.lectureBasename,
       seekTime,
       highlightRange,

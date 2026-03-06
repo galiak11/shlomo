@@ -156,6 +156,14 @@ const LEARNING_PATH = [
     "sealNumber": "ו"
   },
   {
+    "session": 21.5,
+    "title": "חותם שבירת דיני עוני ומחסור",
+    "topic": "שבירת דינים של עוני, הכנעת אויבים, הגנה בסכנה",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "seal",
+    "sealNumber": "ז"
+  },
+  {
     "session": 22,
     "title": "חותם רפואה",
     "topic": "רפואת גוף ונפש",
@@ -172,6 +180,14 @@ const LEARNING_PATH = [
     "sealNumber": "ח"
   },
   {
+    "session": 23.5,
+    "title": "חותם התגברות על מתנגדים",
+    "topic": "אויבים ארצים ורוחניים, עין הרע, מערכות טומאה",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "seal",
+    "sealNumber": "י"
+  },
+  {
     "session": 24,
     "title": "חותם ניצחון במשפט",
     "topic": "הצלחה בדיני משפט",
@@ -186,6 +202,22 @@ const LEARNING_PATH = [
     "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
     "type": "seal",
     "sealNumber": "יב"
+  },
+  {
+    "session": 24.15,
+    "title": "חותם כוחות הביטחון",
+    "topic": "שמירה, הגנה, שבירת כלי מלחמה",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "seal",
+    "sealNumber": "יג"
+  },
+  {
+    "session": 24.16,
+    "title": "חותם שמירה אלוקית",
+    "topic": "שמירה אלוקית עוצמתית, הגנה מסכנות",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "seal",
+    "sealNumber": "יד"
   },
   {
     "session": 24.2,
@@ -243,6 +275,14 @@ const LEARNING_PATH = [
     "sealNumber": "כ"
   },
   {
+    "session": 30.5,
+    "title": "חותם נגד ליסטים, אויבים וגנבים",
+    "topic": "הגנה מגנבים וליסטים, הורדת שפע ופרנסה",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כא"
+  },
+  {
     "session": 31,
     "title": "חותם נגד עניות ותפילה על המים",
     "topic": "שבירת דיני עוני, אורות חסדים",
@@ -267,12 +307,132 @@ const LEARNING_PATH = [
     "sealNumber": "כד"
   },
   {
+    "session": 33.1,
+    "title": "חותם הכנעת אויבים וביטול קטרוג",
+    "topic": "הכנעת אויבים, ביטול מקטרגים, קשירות ועלילות",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כה"
+  },
+  {
+    "session": 33.2,
+    "title": "חותם ביטול מקטרגים והצלחה בעסקים",
+    "topic": "ביטול מקטרגים, הגנה ושגשוג",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כו"
+  },
+  {
+    "session": 33.3,
+    "title": "חותם שמירה על הבית",
+    "topic": "שמירת הבית ותחולתו",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כז"
+  },
+  {
+    "session": 33.4,
+    "title": "חותם הסרת קטרוג ושטנות",
+    "topic": "ביטול שטנות, הגנה מקטרוג",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כח"
+  },
+  {
+    "session": 33.5,
+    "title": "חותם כוח הדיבור",
+    "topic": "דבריו נשמעים בשמיים ובארץ, צדיק גוזר והקב\"ה מקיים",
+    "lectureBasename": "shlomo_hatmaot--lecture_7",
+    "type": "seal",
+    "sealNumber": "כט"
+  },
+  {
     "session": 34,
     "title": "חותם שמירת ברכה",
     "topic": "שמירה מעין, ביטול קנאה",
     "lectureBasename": "shlomo_hatmaot--lecture_7",
     "type": "seal",
     "sealNumber": "ל"
+  },
+  {
+    "session": 35,
+    "title": "חותם לא — שליטה, כבוד ושפע",
+    "topic": "שליטה, כבוד, שפע והון",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לא"
+  },
+  {
+    "session": 36,
+    "title": "חותם לב — התבוננות ושינוי הרגלים",
+    "topic": "התבוננות בפנימיות ושינוי הרגלים",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לב"
+  },
+  {
+    "session": 37,
+    "title": "חותם לג — שמירה על ילדים",
+    "topic": "שמירה על ילדים והרחבת הבהירות",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לג"
+  },
+  {
+    "session": 38,
+    "title": "חותם לד — תיקון המידות",
+    "topic": "תיקון מידות, עבודה פנימית",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לד"
+  },
+  {
+    "session": 39,
+    "title": "חותם לה — פדיון אסורים",
+    "topic": "פדיון אסורים, שחרור ממאסר ומכבלים",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לה"
+  },
+  {
+    "session": 40,
+    "title": "חותם לו — און ואהבה",
+    "topic": "כוח, עוז ואהבה",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לו"
+  },
+  {
+    "session": 41,
+    "title": "חותם לז — עורר חמלה ואהבה",
+    "topic": "עורר חמלה ואהבה בלבבות",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לז"
+  },
+  {
+    "session": 42,
+    "title": "חותם לח — ליולדת ולכל משלח יד",
+    "topic": "טוב ליולדת ולכל משלח יד",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לח"
+  },
+  {
+    "session": 43,
+    "title": "חותם לט — אחדות, זיווג ושלום בית",
+    "topic": "אחדות בין אנשים, מציאת זיווג, שלום בית",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "לט"
+  },
+  {
+    "session": 44,
+    "title": "חותם מ — חן, חסד והתפעלות",
+    "topic": "חן וחסד והגברת ההתפעלות בעשיה",
+    "lectureBasename": "shlomo_hatmaot--lecture_2",
+    "type": "seal",
+    "sealNumber": "מ"
   }
 ];
 

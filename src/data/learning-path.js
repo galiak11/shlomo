@@ -16,7 +16,7 @@ const LEARNING_PATH = [
     "topic": "גלי מוח, השתקת השכל, מעבר לאלפא/תטא",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
     "type": "theory",
-    "sectionTime": "00:55:00"
+    "sectionTime": "00:55:54"
   },
   {
     "session": 3,
@@ -59,11 +59,108 @@ const LEARNING_PATH = [
     "hatmaotNames": ["תרגול חותם — הזרמת אורות חסדים (צינור)"]
   },
   {
-    "session": 7,
-    "title": "חסימות שפע ונ' שערי קדושה",
-    "topic": "ערוצי שפע, חשבונות שמיים, חסימות תודעה",
+    "session": 7.01,
+    "title": "רקע ומקורות",
+    "topic": "פתיחה, חותמות שלמה וקבלה מדיטטיבית, ירידת הדורות",
     "lectureBasename": "shlomo_hatmaot--intro_abundance",
-    "type": "theory"
+    "type": "theory",
+    "sectionTime": "00:00:00"
+  },
+  {
+    "session": 7.02,
+    "title": "ניקוי כלים ושיטות ההתמרה",
+    "topic": "ניקוי כלים בשלוש שיטות, שיטת האורות (הרמק), משל הטרנספורמציה",
+    "lectureBasename": "shlomo_hatmaot--intro_abundance",
+    "type": "theory",
+    "sectionTime": "00:18:00"
+  },
+  {
+    "session": 7.03,
+    "title": "כוח המידה וכוח העין",
+    "topic": "כפי שאדם מודד מודדים לו, כוח העין הרעה, הפעלת חותם",
+    "lectureBasename": "shlomo_hatmaot--intro_abundance",
+    "type": "theory",
+    "sectionTime": "00:40:00"
+  },
+  {
+    "session": 7.04,
+    "title": "מנגנון ההתמרה ועולם השפע",
+    "topic": "חיבור מדע-קבלה, מנגנון ההתמרה, יעקב ועשו, חותמות שפע",
+    "lectureBasename": "shlomo_hatmaot--intro_abundance",
+    "type": "theory",
+    "sectionTime": "01:17:00"
+  },
+  {
+    "session": 7.11,
+    "title": "יסודות ומקורות",
+    "topic": "תהליך ההתפתחות הרוחנית, כוח ההתנגדות, סיפור שלמה המלך",
+    "lectureBasename": "shlomo_hatmaot--intro_general",
+    "type": "theory",
+    "sectionTime": "00:00:00"
+  },
+  {
+    "session": 7.12,
+    "title": "חותמות שלמה — מבנה ורכיבים",
+    "topic": "הצגת החותמות, שמות קדש, אדם הראשון ושמות, המוח כמחשב קוונטי, תת-ההכרה ומציאות",
+    "lectureBasename": "shlomo_hatmaot--intro_general",
+    "type": "theory",
+    "sectionTime": "00:18:00"
+  },
+  {
+    "session": 7.13,
+    "title": "הפתרון המעשי ויישומים",
+    "topic": "הפתרון של שלמה, סוגי שימוש בחותמות, חותמות אישיים, כיסא שלמה",
+    "lectureBasename": "shlomo_hatmaot--intro_general",
+    "type": "theory",
+    "sectionTime": "00:42:00"
+  },
+  {
+    "session": 7.21,
+    "title": "יסודות השינוי הרוחני",
+    "topic": "תהליך השינוי, רכיבי המסך, חמישים שערי קדושה, כסף מספירת גבורה",
+    "lectureBasename": "shlomo_hatmaot--open_conference",
+    "type": "theory",
+    "sectionTime": "00:00:00"
+  },
+  {
+    "session": 7.22,
+    "title": "שבירת מחסומים",
+    "topic": "מחסום התודעה, שנייה אחת לשינוי, שלמה המלך ושפע, שבירת חסימות",
+    "lectureBasename": "shlomo_hatmaot--open_conference",
+    "type": "theory",
+    "sectionTime": "00:17:00"
+  },
+  {
+    "session": 7.23,
+    "title": "הפעלה מעשית",
+    "topic": "חותם הון ועושר, החזקת התדר, הפעלת חותמות עם הידיים",
+    "lectureBasename": "shlomo_hatmaot--open_conference",
+    "type": "theory",
+    "sectionTime": "00:40:00"
+  },
+  {
+    "session": 7.3,
+    "title": "יסודות הבריאה",
+    "topic": "מחשבת הבריאה, תהליך הצמצום, קדושה וטומאה",
+    "lectureBasename": "shlomo_hatmaot--lecture_1",
+    "type": "theory",
+    "sectionTime": "00:00:00"
+  },
+  {
+    "session": 7.4,
+    "title": "שלבי ההתפתחות וכוחות ההתנגדות",
+    "topic": "שלושת שלבי ההתפתחות הרוחנית, כוחות ההתנגדות, הקושי להתמודד לבד",
+    "lectureBasename": "shlomo_hatmaot--lecture_1",
+    "type": "theory",
+    "sectionTime": "00:23:26"
+  },
+  {
+    "session": 7.5,
+    "title": "חותמות שלמה כפתרון",
+    "topic": "כיצד חותמות שלמה עוזרים להתגבר על כוחות ההתנגדות — שאלות ותשובות",
+    "lectureBasename": "shlomo_hatmaot--lecture_1",
+    "type": "theory",
+    "sectionTime": "00:51:26"
   },
   {
     "session": 8,
@@ -79,7 +176,7 @@ const LEARNING_PATH = [
     "topic": "ביטול חוקי זמן, מקום ומרחק; חניכה בממד החמישי",
     "lectureBasename": "shlomo_hatmaot--lecture_2",
     "type": "initiation",
-    "sectionTime": "01:29:37",
+    "sectionTime": "01:29:34",
     "hatmaotNames": ["חניכה שנייה — אורות החסדים (ממד חמישי)", "תרגול הזרמת אורות חסדים דרך הידיים"]
   },
   {
@@ -88,7 +185,7 @@ const LEARNING_PATH = [
     "topic": "הזרמה לחותם, סיבוב החותם בגוף, ריפוי קבוצתי",
     "lectureBasename": "shlomo_hatmaot--lecture_2",
     "type": "practice",
-    "sectionTime": "01:45:48",
+    "sectionTime": "01:46:00",
     "hatmaotNames": ["הפעלת חותם רפואה עם הידיים", "הטמעת חותם בגוף — סיבוב החותם", "טיפול קבוצתי בחותם רפואה"]
   },
   {
@@ -97,6 +194,7 @@ const LEARNING_PATH = [
     "topic": "אורות חסדים וגבורות, שבע ספירות תחתונות",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
     "type": "theory",
+    "sectionTime": "00:00:00",
     "summarySections": ["כוחות הידיים ושבע הספירות התחתונות"]
   },
   {
@@ -105,6 +203,7 @@ const LEARNING_PATH = [
     "topic": "חסימות, פגמים, מנגנון הרחבת כלים",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
     "type": "theory",
+    "sectionTime": "00:14:00",
     "summarySections": ["מנגנון הרחבת הכלים והתיקון", "חסימות שורשיות ותיקונן"]
   },
   {
@@ -123,6 +222,7 @@ const LEARNING_PATH = [
     "topic": "חניכה שלישית — צריבת חותמות",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
     "type": "initiation",
+    "sectionTime": "01:00:00",
     "summarySections": []
   },
   {
@@ -313,6 +413,7 @@ const LEARNING_PATH = [
     "topic": "נתיב חיים, הרצון הפנימי, ארבעה שלבים לבקשת שינוי",
     "lectureBasename": "shlomo_hatmaot--lecture_6",
     "type": "theory",
+    "sectionTime": "00:00:00",
     "summarySections": ["פתיחה", "מהו נתיב חיים", "האם אפשר לשנות את הנתיב", "הרצון הפנימי", "ארבעת השלבים לבקשת שינוי"]
   },
   {
@@ -329,6 +430,7 @@ const LEARNING_PATH = [
     "topic": "תרגיל הכרת הטוב, מדיטציה לשינוי נתיב חיים",
     "lectureBasename": "shlomo_hatmaot--lecture_6",
     "type": "practice",
+    "sectionTime": "00:45:00",
     "summarySections": ["מדיטציה — שינוי נתיב"],
 
     "hatmaotNames": ["תרגיל הכרת הטוב", "מדיטציה — שינוי נתיב חיים"]

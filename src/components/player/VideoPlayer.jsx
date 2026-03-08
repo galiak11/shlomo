@@ -38,11 +38,11 @@ export default function VideoPlayer({
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          player.seekRelative(-6);
+          player.seekRelative(e.metaKey || e.ctrlKey ? -2 : -6);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          player.seekRelative(6);
+          player.seekRelative(e.metaKey || e.ctrlKey ? 2 : 6);
           break;
         case 'f':
           e.preventDefault();

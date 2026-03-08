@@ -32,8 +32,23 @@ function timeToSec(t) {
   return null;
 }
 
-/** Filter timestamp-based summary (paragraphs with [HH:MM - HH:MM](#t=HH:MM:SS) anchors). */
-function filterByTimestamp(summaryMd, session, sessionGroup) {
+/** Resolve a block's anchor to seconds: handles both #t=HH:MM:SS and #seek=SLUG. */
+function blockAnchorTime(block, lectureData) {
+  const tMatch = block.match(/#t=(\d{1,2}:\d{2}:\d{2})/);
+  if (tMatch) return timeToSec(tMatch[1]);
+  const slugMatch = block.match(/#seek=([\w-]+)/);
+  if (slugMatch && lectureData) {
+    const slug = slugMatch[1];
+    const pos =
+      lectureData.positions?.find(p => p.slug === slug) ||
+      lectureData.hatmaot?.find(h => h.slug === slug);
+    if (pos?.startTime) return timeToSec(pos.startTime);
+  }
+  return null;
+}
+
+/** Filter timestamp-based summary (paragraphs with [HH:MM - HH:MM](#t=HH:MM:SS) or [▶](#seek=SLUG) anchors). */
+function filterByTimestamp(summaryMd, session, sessionGroup, lectureData) {
   const myTime = timeToSec(session.sectionTime);
 
   // Collect sorted unique sectionTimes across the group
@@ -47,9 +62,8 @@ function filterByTimestamp(summaryMd, session, sessionGroup) {
   // Assign each block to a session time; orphans inherit the last known session time
   let currentTime = allTimes[0];
   const tagged = blocks.map(block => {
-    const m = block.match(/#t=(\d{1,2}:\d{2}:\d{2})/);
-    if (m) {
-      const t = timeToSec(m[1]);
+    const t = blockAnchorTime(block, lectureData);
+    if (t !== null) {
       let assigned = allTimes[0];
       for (const st of allTimes) { if (st <= t) assigned = st; }
       currentTime = assigned;
@@ -112,11 +126,24 @@ function filterByHeadings(summaryMd, session, sessionGroup) {
 }
 
 /** Return filtered summary markdown for a single session, or null to show nothing, or the full text if no filter is set. */
-function filterSummaryForSession(summaryMd, session, sessionGroup) {
+function filterSummaryForSession(summaryMd, session, sessionGroup, lectureData) {
   if (!summaryMd) return null;
-  if (session.sectionTime !== undefined) return filterByTimestamp(summaryMd, session, sessionGroup);
+  if (session.sectionTime !== undefined) return filterByTimestamp(summaryMd, session, sessionGroup, lectureData);
   if (session.summarySections !== undefined) return filterByHeadings(summaryMd, session, sessionGroup);
   return summaryMd;
+}
+
+/** Inject ## topic headings before standalone [▶](#seek=SLUG) lines, using positions[].label / hatmaot[].name from metadata. */
+function addTopicHeadings(md, lectureData) {
+  if (!md || !lectureData) return md;
+  return md.replace(/^\[▶\]\(#seek=([\w-]+)\)$/gm, (match, slug) => {
+    const pos =
+      lectureData.positions?.find(p => p.slug === slug) ||
+      lectureData.hatmaot?.find(h => h.slug === slug);
+    const heading = pos?.label || pos?.name;
+    if (heading) return `## ${heading}\n\n${match}`;
+    return match;
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,7 +263,7 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
     ? (seals.find((s) => s.number === session.sealNumber) || null)
     : null;
 
-  // Seal metadata — loaded only when expanded and is a seal session
+  // Seal metadata — loaded whenever the session is a seal (needed for play button startTime)
   const {
     sealMeta,
     essenceMarkdown,
@@ -245,7 +272,7 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
   } = useSealLectureData(
     session.sealNumber || null,
     seal?.imageUrl || null,
-    expanded && !!seal,
+    !!seal,
   );
 
   // Lecture metadata — always loaded for practice/initiation (הפעל needs it even when collapsed)
@@ -321,25 +348,27 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
         tabIndex={0}
         onClick={() => { if (!window.getSelection()?.toString()) toggleExpanded(); }}
         onKeyDown={(e) => e.key === 'Enter' && toggleExpanded()}
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent/50 transition"
+        className={`flex items-stretch gap-2 px-3 cursor-pointer hover:bg-accent/50 transition${seal ? ' my-px' : ''}`}
         dir="rtl"
       >
         {/* Session label */}
-        <span className="text-[10px] text-muted-foreground font-mono w-6 shrink-0 text-center">
+        <span className="text-[10px] text-muted-foreground font-mono w-6 shrink-0 text-center self-center py-2.5">
           {sessionLabel}
         </span>
 
-        {/* Seal thumbnail */}
+        {/* Seal thumbnail — fills full row height */}
         {seal?.imageUrl && (
-          <img
-            src={seal.imageUrl}
-            alt={seal.name}
-            className="w-8 h-8 object-contain rounded bg-muted p-0.5 shrink-0"
-          />
+          <div className="w-12 shrink-0 self-stretch overflow-hidden rounded bg-muted">
+            <img
+              src={seal.imageUrl}
+              alt={seal.name}
+              className="w-full h-full object-cover scale-[1.6] translate-y-[10%]"
+            />
+          </div>
         )}
 
-        {/* Title + topic — takes up remaining space */}
-        <div className="flex-1 min-w-0">
+        {/* Title + topic — sets row height via its own padding */}
+        <div className="flex-1 min-w-0 py-2.5">
           <div className="flex items-center gap-1.5">
             <p className="font-medium text-sm leading-tight">
               <AnnotatedText text={session.title} />
@@ -347,10 +376,12 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const firstHatmaa = session.hatmaotNames?.[0]
-                  ? lectureData?.hatmaot?.find(h => h.name === session.hatmaotNames[0])
-                  : null;
-                onPlay(session, firstHatmaa?.startTime ?? session.sectionTime ?? undefined);
+                const startTime = seal
+                  ? (sealMeta?.hatmaaTime?.startTime ?? undefined)
+                  : (session.hatmaotNames?.[0]
+                    ? lectureData?.hatmaot?.find(h => h.name === session.hatmaotNames[0])?.startTime
+                    : undefined) ?? session.sectionTime ?? undefined;
+                onPlay(session, startTime);
               }}
               className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
               title="הפעל מפגש"
@@ -365,14 +396,14 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
         </div>
 
         {/* Type badge — per-type color */}
-        <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${config.color}`}>
+        <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 self-center ${config.color}`}>
           <Icon className="w-3 h-3" />
           <span className="hidden sm:inline">{config.label}</span>
         </span>
 
         {/* Expand chevron */}
         <ChevronDown
-          className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 self-center ${expanded ? 'rotate-180' : ''}`}
         />
       </div>
 
@@ -393,31 +424,22 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
                 /* ── Seal session: full seal data + markdown content ── */
                 <div className="space-y-3">
 
-                  {/* Seal header: image + names */}
-                  <div className="flex gap-3">
-                    {seal.imageUrl && (
-                      <img
-                        src={seal.imageUrl}
-                        alt={seal.name}
-                        className="w-16 h-16 object-contain rounded border border-border bg-background p-0.5 shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="font-bold text-sm leading-tight"><AnnotatedText text={seal.purposeSummary} /></p>
-                      {seal.content?.mainTitle && (
-                        <p className="text-xs text-muted-foreground font-medium"><AnnotatedText text={seal.content.mainTitle} /></p>
-                      )}
-                      {seal.content?.sealTitle && (
-                        <p className="text-xs text-primary">{seal.content.sealTitle}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Full description */}
-                  {seal.content?.description && (
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      <AnnotatedText text={seal.content.description} />
+                  {/* mainTitle — shown here when expanded so image doesn't shrink */}
+                  {seal.content?.mainTitle && (
+                    <p className="text-[6px] text-muted-foreground whitespace-nowrap leading-none">
+                      {seal.content.mainTitle}
                     </p>
+                  )}
+
+                  {/* Seal header: title inline with description */}
+                  <p className="text-xs leading-relaxed">
+                    <span className="font-bold text-sm leading-tight"><AnnotatedText text={seal.purposeSummary} /></span>
+                    {seal.content?.description && (
+                      <span className="text-muted-foreground"> — <AnnotatedText text={seal.content.description} /></span>
+                    )}
+                  </p>
+                  {seal.content?.sealTitle && (
+                    <p className="text-xs text-primary">{seal.content.sealTitle}</p>
                   )}
 
                   {/* Qualities (סגולות) */}
@@ -520,13 +542,14 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
                 /* ── Theory / practice / initiation: filtered lecture summary ── */
                 (() => {
                   const filteredSummary = lectureData?.summary?.he
-                    ? filterSummaryForSession(lectureData.summary.he, session, sessionGroup || [session])
+                    ? filterSummaryForSession(lectureData.summary.he, session, sessionGroup || [session], lectureData)
                     : null;
+                  const summaryWithHeadings = filteredSummary ? addTopicHeadings(filteredSummary, lectureData) : null;
                   return (
                     <div className="text-right">
-                      {filteredSummary ? (
+                      {summaryWithHeadings ? (
                         <ReactMarkdown components={markdownComponents}>
-                          {filteredSummary}
+                          {summaryWithHeadings}
                         </ReactMarkdown>
                       ) : lectureData?.lecture?.description?.he ? (
                         <p className="text-xs leading-relaxed text-muted-foreground">
@@ -571,6 +594,10 @@ export default function LearningPath() {
   // When a filter is active (activeFilter !== null): all groups expanded by default.
   const [groupOverrides, setGroupOverrides]     = useState(new Map());
   const playerRef = useRef(null);
+  const headerRef  = useRef(null);
+  const scrollStateRef = useRef({ lastY: 0, topOffset: 0 });
+  const [stickyTop, setStickyTop] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768);
 
   // URL session param — used to defaultExpand and scroll to a session on load
   const urlSession    = searchParams.get('session');
@@ -620,6 +647,36 @@ export default function LearningPath() {
     }, 400);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track desktop vs mobile (md = 768px)
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Scroll-linked sticky top: video sits just below the fixed navbar (64px); header reveals on scroll up
+  const NAV_HEIGHT = 64; // Navbar is fixed h-16 = 64px
+  useEffect(() => {
+    if (!selectedSession || !isDesktop) { setStickyTop(NAV_HEIGHT); return; }
+    scrollStateRef.current = { lastY: window.scrollY, topOffset: NAV_HEIGHT };
+    setStickyTop(NAV_HEIGHT);
+    const onScroll = () => {
+      if (!headerRef.current) return;
+      const headerH = headerRef.current.offsetHeight + 12; // +12px for space-y-3 gap before video
+      const y = window.scrollY;
+      const delta = y - scrollStateRef.current.lastY;
+      // Negate delta: scroll DOWN hides header (top → NAV_HEIGHT−headerH); scroll UP reveals (top → NAV_HEIGHT)
+      let newTop = scrollStateRef.current.topOffset - delta;
+      newTop = Math.max(NAV_HEIGHT - headerH, Math.min(NAV_HEIGHT, newTop));
+      if (y <= 0) newTop = NAV_HEIGHT;
+      scrollStateRef.current.topOffset = newTop;
+      scrollStateRef.current.lastY = y;
+      setStickyTop(newTop);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [selectedSession?.session, isDesktop]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleGroup = useCallback((basename, groupIdx) => {
     setGroupOverrides((prev) => {
@@ -689,26 +746,18 @@ export default function LearningPath() {
   // onPlay: called by SessionRow when user clicks a play or time-link button
   // highlightRange (optional): { startTime, endTime } strings — overrides default fullRange highlight
   const handlePlay = useCallback((session, seekTimeStr, highlightRange) => {
-    const isNewLecture = session.lectureBasename !== selectedSession?.lectureBasename;
     setSelectedSession(session);
     setSelectedHighlight(highlightRange
       ? { startTime: toSeconds(highlightRange.startTime), endTime: toSeconds(highlightRange.endTime) }
       : null,
     );
 
-    setAutoPlay(seekTimeStr !== undefined);
-    if (seekTimeStr !== undefined) {
-      setSeekTime(toSeconds(seekTimeStr));
-      setSeekRevision((r) => r + 1);
-    } else if (isNewLecture) {
-      setSeekTime(undefined);
-      setSeekRevision(0);
-    }
-
-    setTimeout(() => {
-      playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 80);
-  }, [selectedSession]);
+    // Always play; fall back to beginning if no timestamp provided
+    const effectiveTime = seekTimeStr ?? '00:00:00';
+    setAutoPlay(true);
+    setSeekTime(toSeconds(effectiveTime));
+    setSeekRevision((r) => r + 1);
+  }, []);
 
   // Called from the player panel sidebar time-links
   const handleSeek = useCallback((timeStr, highlightRange) => {
@@ -742,14 +791,14 @@ export default function LearningPath() {
   }, [selectedSession, selectedSessionLectureData]);
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className={`mx-auto px-4 sm:px-6 py-4 sm:py-6 ${selectedSession ? 'max-w-6xl' : 'max-w-4xl'}`}>
 
-      {/* Header */}
-      <header className="space-y-2 text-center">
+      {/* Header — always full width */}
+      <header className="space-y-2 text-center mb-6">
         <Sparkles className="w-8 h-8 text-primary mx-auto" />
         <h1 className="text-2xl sm:text-3xl font-bold">מסלול לימוד</h1>
         <p className="text-muted-foreground text-sm">
-          {activeFilter ? `${filteredCount} מתוך ${sessions.length} מפגשים` : `${sessions.length} מפגשים`}
+          {activeFilter ? `${filteredGroups.length} מתוך ${groups.length} שיעורים` : `${groups.length} שיעורים`}
           {' '}— מתיאוריה בסיסית ועד צריבת חותמות מתקדמת
         </p>
 
@@ -824,6 +873,10 @@ export default function LearningPath() {
           />
         </div>
       </header>
+
+      {/* Two-column content area */}
+      <div className={selectedSession && isDesktop ? 'flex gap-0 items-start' : ''}>
+      <div className={selectedSession && isDesktop ? 'flex-1 min-w-0 border-r border-border pr-6' : 'w-full'}>
 
       {/* Session groups */}
       <div className="space-y-8" dir="rtl">
@@ -909,16 +962,28 @@ export default function LearningPath() {
         })}
       </div>
 
-      {/* Sticky player panel */}
+      </div>{/* close left column */}
+
+      {/* ── Video panel: sticky sidebar on tablet+, fixed bottom overlay on phone ── */}
+      {selectedSession && !isDesktop && (
+        <div className="fixed inset-0 z-40" onClick={handleClose} aria-hidden="true" />
+      )}
       {selectedSession && (
         <div
           ref={playerRef}
-          className="sticky bottom-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.12)]"
+          className={isDesktop
+            ? "w-[280px] lg:w-[380px] xl:w-[420px] shrink-0 sticky self-start space-y-3 pl-6"
+            : "fixed bottom-0 inset-x-0 z-50 bg-background border-t border-border shadow-2xl max-h-[55vh] overflow-y-auto p-4 space-y-3"}
+          style={isDesktop ? { top: `${stickyTop}px` } : undefined}
+          dir="rtl"
         >
-          <div className="max-w-4xl mx-auto space-y-2">
-
-            {/* Title bar — X on visual right (first in RTL), title fills left */}
-            <div className="flex items-center gap-2" dir="rtl">
+          {/* ABOVE VIDEO: lecture name + close, section title + play, topic */}
+          <div ref={headerRef} className="space-y-0.5 text-right">
+            {/* Row 1: lecture name + X close */}
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground truncate flex-1">
+                {selectedLecture?.title?.he?.replace(/^שיעור \d+:\s+/, '') ?? ''}
+              </p>
               <button
                 onClick={handleClose}
                 className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition"
@@ -926,172 +991,165 @@ export default function LearningPath() {
               >
                 <X className="w-4 h-4" />
               </button>
-              <p className="flex-1 text-xs font-medium text-foreground/80 truncate min-w-0">
-                {selectedSession.title}
-                {selectedSession.topic && (
-                  <span className="text-muted-foreground font-normal"> — {selectedSession.topic}</span>
-                )}
-              </p>
             </div>
+            {/* Row 2: section title + inline play button */}
+            <div className="flex items-center gap-1">
+              <p className="font-semibold text-sm leading-snug flex-1">{selectedSession.title}</p>
+              {(() => {
+                const t = selectedSeal
+                  ? (selectedSealMeta?.hatmaaTime?.startTime ?? selectedSession.sectionTime)
+                  : (selectedHatmaot[0]?.startTime ?? selectedSession.sectionTime);
+                const range = selectedSeal
+                  ? (selectedSealMeta?.hatmaaTime ?? null)
+                  : (selectedHatmaot[0]
+                    ? { startTime: selectedHatmaot[0].startTime, endTime: selectedHatmaot[0].endTime }
+                    : null);
+                if (!t) return null;
+                return (
+                  <button
+                    onClick={() => handleSeek(t, range)}
+                    className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
+                  >
+                    <Play className="w-3 h-3 fill-current" style={{ transform: 'scaleX(-1)' }} />
+                    {t.slice(0, 5)}
+                  </button>
+                );
+              })()}
+            </div>
+            {/* Row 3: topic */}
+            {selectedSession.topic && (
+              <p className="text-xs text-primary">{selectedSession.topic}</p>
+            )}
+          </div>
+          <VideoPlayer
+            key={playerKey}
+            videoUrl={getVideoUrl(selectedSession.lectureBasename)}
+            subtitleBasename={selectedSession.lectureBasename}
+            startTime={seekTime}
+            autoPlay={autoPlay}
+            highlightRanges={highlightRanges}
+          />
 
-            <div className="flex flex-col sm:flex-row gap-4" dir="rtl">
+          {/* Large hotam image for seal sessions — full width, above the border */}
+          {selectedSeal?.imageUrl && (
+            <img
+              src={selectedSeal.imageUrl}
+              alt={selectedSeal.name}
+              className="w-full object-contain rounded bg-muted p-1"
+            />
+          )}
 
-              {/* Side panel */}
-              <div className="sm:w-[220px] shrink-0 flex flex-col gap-2">
-                {selectedSeal ? (
-                  /* Seal session */
-                  <>
-                    <div className="flex items-start gap-2">
-                      {selectedSeal.imageUrl && (
-                        <img
-                          src={selectedSeal.imageUrl}
-                          alt={selectedSeal.name}
-                          className="w-16 h-16 object-contain rounded bg-muted p-0.5 shrink-0"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm leading-tight">{selectedSeal.purposeSummary}</p>
-                        <p className="text-xs text-primary mt-0.5">{selectedSeal.content?.sealTitle}</p>
-                      </div>
-                    </div>
-                    {selectedSeal.keyConcepts?.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground line-clamp-2">
-                        {selectedSeal.keyConcepts.join(' · ')}
-                      </p>
-                    )}
-                    {selectedSealMeta && (
-                      <div className="flex gap-3 text-xs flex-wrap">
-                        {selectedSealMeta.hatmaaTime && (
-                          <button
-                            onClick={() => handleSeek(selectedSealMeta.hatmaaTime.startTime, selectedSealMeta.hatmaaTime)}
-                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
-                          >
-                            הטמעה
-                          </button>
-                        )}
-                        {selectedSealMeta.explanationTime && (
-                          <button
-                            onClick={() => handleSeek(selectedSealMeta.explanationTime.startTime, selectedSealMeta.explanationTime)}
-                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
-                          >
-                            הסבר
-                          </button>
-                        )}
-                        {selectedSealMeta.fullRange && (
-                          <button
-                            onClick={() => handleSeek(selectedSealMeta.fullRange.startTime, selectedSealMeta.fullRange)}
-                            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
-                          >
-                            כל הקטע
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    <Link
-                      to={createPageUrl('SealDetail') + `?id=${selectedSeal.id}`}
-                      className="text-xs text-primary hover:underline flex items-center gap-1 mt-auto"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      פרטי החותם
-                    </Link>
-                  </>
-                ) : (
-                  /* Non-seal session — tabbed: סיכום | תמלול */
-                  <Tabs value={sideTab} onValueChange={setSideTab} className="flex flex-col gap-2">
-                    <TabsList className="h-7 w-full">
-                      <TabsTrigger value="summary" className="text-xs flex-1 h-6">סיכום</TabsTrigger>
-                      <TabsTrigger value="transcription" className="text-xs flex-1 h-6">תמלול</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="summary" className="mt-0 space-y-1.5" dir="rtl">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-semibold text-sm leading-snug">{selectedSession.title}</p>
-                        {(selectedHatmaot[0]?.startTime || selectedSession.sectionTime) && (() => {
-                          const t = selectedHatmaot[0]?.startTime ?? selectedSession.sectionTime;
-                          const range = selectedHatmaot[0] ? { startTime: selectedHatmaot[0].startTime, endTime: selectedHatmaot[0].endTime } : null;
-                          return (
-                            <button
-                              onClick={() => handleSeek(t, range)}
-                              className="shrink-0 text-[10px] text-purple-600 hover:underline flex items-center gap-0.5"
-                            >
-                              <Play className="w-2.5 h-2.5 fill-current" />
-                              {t.slice(0, 5)}
-                            </button>
-                          );
-                        })()}
-                      </div>
-                      <p className="text-xs text-primary">{selectedSession.topic}</p>
-                      {selectedLecture && (
-                        <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-4">
-                          {shortDesc(selectedLecture.description?.he)}
-                        </p>
-                      )}
-                      <Link
-                        to={createPageUrl('LectureDetail') + `?lecture=${selectedSession.lectureBasename}`}
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        פתח שיעור מלא
-                      </Link>
-                    </TabsContent>
-
-                    <TabsContent value="transcription" className="mt-0" dir="rtl">
-                      {selectedHatmaot.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">אין תמלול זמין למפגש זה</p>
-                      ) : (
-                        <div className="space-y-3 max-h-48 overflow-y-auto">
-                          {selectedHatmaot.map((h) => (
-                            <div key={h.name} className="space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-[11px] font-semibold text-foreground leading-snug">{h.name}</p>
-                                {h.startTime && (
-                                  <button
-                                    onClick={() => handleSeek(h.startTime, { startTime: h.startTime, endTime: h.endTime })}
-                                    className="shrink-0 text-[10px] text-purple-600 hover:underline flex items-center gap-0.5"
-                                  >
-                                    <Play className="w-2.5 h-2.5 fill-current" />
-                                    {h.startTime.slice(0, 5)}
-                                  </button>
-                                )}
-                              </div>
-                              {h.goal && (
-                                <p className="text-[10px] text-muted-foreground italic leading-relaxed">{h.goal}</p>
-                              )}
-                              {h.transcription && (
-                                <p className="text-[10px] leading-relaxed text-foreground/80 whitespace-pre-line">
-                                  {h.transcription}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                )}
-              </div>
-
-              {/* Video player */}
-              <div className="flex-1 min-w-0">
-                {selectedLecture?.title?.he && (
-                  <p className="text-xs text-center text-muted-foreground mb-1.5 truncate">
-                    {selectedLecture.title.he.replace(/^שיעור \d+:\s+/, '')}
+          {/* BELOW VIDEO */}
+          <div className="border-t border-border/40 pt-3 max-h-[40vh] overflow-y-auto pb-4">
+            {selectedSeal ? (
+              /* Seal session */
+              <div className="space-y-2 text-right">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm leading-tight">{selectedSeal.purposeSummary}</p>
+                  <p className="text-xs text-primary mt-0.5">{selectedSeal.content?.sealTitle}</p>
+                </div>
+                {selectedSeal.keyConcepts?.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground line-clamp-2">
+                    {selectedSeal.keyConcepts.join(' · ')}
                   </p>
                 )}
-                <VideoPlayer
-                  key={playerKey}
-                  videoUrl={getVideoUrl(selectedSession.lectureBasename)}
-                  subtitleBasename={selectedSession.lectureBasename}
-                  startTime={seekTime}
-                  autoPlay={autoPlay}
-                  highlightRanges={highlightRanges}
-                />
+                {selectedSealMeta && (
+                  <div className="flex gap-3 text-xs flex-wrap">
+                    {selectedSealMeta.hatmaaTime && (
+                      <button
+                        onClick={() => handleSeek(selectedSealMeta.hatmaaTime.startTime, selectedSealMeta.hatmaaTime)}
+                        className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                      >
+                        הטמעה
+                      </button>
+                    )}
+                    {selectedSealMeta.explanationTime && (
+                      <button
+                        onClick={() => handleSeek(selectedSealMeta.explanationTime.startTime, selectedSealMeta.explanationTime)}
+                        className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                      >
+                        הסבר
+                      </button>
+                    )}
+                    {selectedSealMeta.fullRange && (
+                      <button
+                        onClick={() => handleSeek(selectedSealMeta.fullRange.startTime, selectedSealMeta.fullRange)}
+                        className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+                      >
+                        כל הקטע
+                      </button>
+                    )}
+                  </div>
+                )}
+                <Link
+                  to={createPageUrl('SealDetail') + `?id=${selectedSeal.id}`}
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  פרטי החותם
+                </Link>
               </div>
-            </div>
+            ) : (
+              /* Non-seal session — tabbed: סיכום | תמלול */
+              <Tabs value={sideTab} onValueChange={setSideTab} className="flex flex-col gap-2">
+                <TabsList className="h-7 w-full">
+                  <TabsTrigger value="transcription" className="text-xs flex-1 h-6">תמלול</TabsTrigger>
+                  <TabsTrigger value="summary" className="text-xs flex-1 h-6">סיכום</TabsTrigger>
+                </TabsList>
 
+                <TabsContent value="summary" className="mt-0 space-y-1.5 px-2" dir="rtl">
+                  {selectedLecture && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-4">
+                      {shortDesc(selectedLecture.description?.he)}
+                    </p>
+                  )}
+                  <Link
+                    to={createPageUrl('LectureDetail') + `?lecture=${selectedSession.lectureBasename}`}
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    פתח שיעור מלא
+                  </Link>
+                </TabsContent>
+
+                <TabsContent value="transcription" className="mt-0 px-2" dir="rtl">
+                  {selectedHatmaot.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">אין תמלול זמין למפגש זה</p>
+                  ) : (
+                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                      {selectedHatmaot.map((h) => (
+                        <div key={h.name} className="space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold text-foreground leading-snug">{h.name}</p>
+                            {h.startTime && (
+                              <button
+                                onClick={() => handleSeek(h.startTime, { startTime: h.startTime, endTime: h.endTime })}
+                                className="shrink-0 text-[10px] text-purple-600 hover:underline flex items-center gap-0.5"
+                              >
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                {h.startTime.slice(0, 5)}
+                              </button>
+                            )}
+                          </div>
+                          {h.goal && (
+                            <p className="text-[10px] text-muted-foreground italic leading-relaxed">{h.goal}</p>
+                          )}
+                          {h.transcription && (
+                            <p className="text-[10px] leading-relaxed text-foreground/80 whitespace-pre-line">
+                              {h.transcription}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </div>
       )}
+      </div>{/* close flex wrapper */}
     </div>
   );
 }

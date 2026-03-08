@@ -33,8 +33,9 @@ function formatLectureName(name) {
 }
 
 /** Build ReactMarkdown component overrides for modal display.
- *  onTimestamp(startTime, endTime) is called when a #t= link is clicked. */
-function buildModalMdComponents(onTimestamp) {
+ *  onTimestamp(startTime, endTime) is called when a seek link is clicked.
+ *  lectureData (optional) is used to resolve #seek=SLUG links via positions[] / hatmaot[]. */
+function buildModalMdComponents(onTimestamp, lectureData) {
   return {
     h3: ({ children }) => (
       <p className="text-sm font-semibold text-purple-700 mt-3 mb-1">{children}</p>
@@ -52,6 +53,27 @@ function buildModalMdComponents(onTimestamp) {
       <strong className="font-semibold text-foreground">{children}</strong>
     ),
     a: ({ href, children }) => {
+      // Primary: #seek=SLUG — resolves from lectureData if available
+      const seekMatch = href?.match(/^#seek=([\w-]+)$/);
+      if (seekMatch && lectureData) {
+        const slug = seekMatch[1];
+        const position =
+          lectureData.positions?.find(p => p.slug === slug) ||
+          lectureData.hatmaot?.find(h => h.slug === slug);
+        if (position) {
+          const displayStart = position.startTime.slice(0, 5);
+          const displayEnd = position.endTime ? ` - ${position.endTime.slice(0, 5)}` : '';
+          return (
+            <button
+              onClick={() => onTimestamp(position.startTime, position.endTime)}
+              className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+            >
+              {displayStart}{displayEnd} ▶
+            </button>
+          );
+        }
+      }
+      // Legacy: #t= links
       const match = href && href.match(/#t=([^&]+)(?:&end=(.+))?/);
       if (match && onTimestamp) {
         return (

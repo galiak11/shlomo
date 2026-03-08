@@ -74,6 +74,43 @@ export default function LectureDetail() {
 
   const defaultTab = hasSummary ? 'summary' : hasHatmaot ? 'hatmaot' : hasSeals ? 'seals' : 'quotes';
 
+  // Markdown components for the summary tab — intercepts #seek= and legacy #t= links
+  const summaryMdComponents = useMemo(() => ({
+    a: ({ href, children }) => {
+      const seekMatch = href?.match(/^#seek=([\w-]+)$/);
+      if (seekMatch) {
+        const slug = seekMatch[1];
+        const position =
+          metadata?.positions?.find(p => p.slug === slug) ||
+          metadata?.hatmaot?.find(h => h.slug === slug);
+        if (position) {
+          const displayStart = position.startTime.slice(0, 5);
+          const displayEnd = position.endTime ? ` - ${position.endTime.slice(0, 5)}` : '';
+          return (
+            <button
+              onClick={() => handleSeek(position.startTime)}
+              className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+            >
+              {displayStart}{displayEnd} ▶
+            </button>
+          );
+        }
+      }
+      const timeMatch = href?.match(/^#t=(\d+:\d+:\d+)/);
+      if (timeMatch) {
+        return (
+          <button
+            onClick={() => handleSeek(timeMatch[1])}
+            className="text-purple-600 underline decoration-purple-300 hover:decoration-purple-600"
+          >
+            {children}
+          </button>
+        );
+      }
+      return <a href={href} className="text-primary underline">{children}</a>;
+    },
+  }), [metadata, handleSeek]);
+
   if (!lecture) {
     return (
       <div className="p-6 text-center">
@@ -150,7 +187,7 @@ export default function LectureDetail() {
           {hasSummary && (
             <TabsContent value="summary">
               <div className="prose prose-sm max-w-none dark:prose-invert rtl-prose">
-                <ReactMarkdown>{metadata.summary.he}</ReactMarkdown>
+                <ReactMarkdown components={summaryMdComponents}>{metadata.summary.he}</ReactMarkdown>
               </div>
             </TabsContent>
           )}

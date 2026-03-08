@@ -9,7 +9,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { usePlayerSingleton } from './PlayerSingletonContext';
 import { getSubtitleUrl } from './utils';
 
-export default function useVideoPlayer({ videoUrl, subtitleBasename, startTime }) {
+export default function useVideoPlayer({ videoUrl, subtitleBasename, startTime, autoPlay = false }) {
   const videoRef = useRef(null);
   const singleton = usePlayerSingleton();
 
@@ -51,11 +51,15 @@ export default function useVideoPlayer({ videoUrl, subtitleBasename, startTime }
     setDuration(video.duration);
     setIsLoading(false);
 
-    // Seek to startTime if provided
     if (startTime && startTime > 0) {
       video.currentTime = startTime;
+      if (autoPlay) {
+        if (singleton) singleton.notifyPlay(() => video.pause());
+        video.play().catch(() => {});
+        setHasStarted(true);
+      }
     }
-  }, [startTime]);
+  }, [startTime, autoPlay, singleton]);
 
   const onTimeUpdate = useCallback(() => {
     const video = videoRef.current;

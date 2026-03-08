@@ -7,42 +7,56 @@ const LEARNING_PATH = [
     "title": "מבוא — מקורות החותמות",
     "topic": "קבלה מעשית, חותמות שלמה, אורות חסדים וחוכמה",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "theory"
+    "type": "theory",
+    "sectionTime": "00:00:00"
   },
   {
     "session": 2,
     "title": "המוח כמכשיר אפנון תדרים",
     "topic": "גלי מוח, השתקת השכל, מעבר לאלפא/תטא",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "theory"
+    "type": "theory",
+    "sectionTime": "00:55:00"
   },
   {
     "session": 3,
     "title": "תרגול — השתקת השכל (הבלון)",
     "topic": "דמיון מונחה: בלון שחור סופג כל מחשבה",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "practice"
+    "type": "practice",
+    "sectionTime": "01:43:00",
+
+    "hatmaotNames": ["תרגיל השתקת השכל — תרגיל הבלון"]
   },
   {
     "session": 4,
     "title": "הטמעת שם הוויה",
     "topic": "הקרנת אור לאותיות י-ה-ו-ה, חוויית אור חוזר",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "practice"
+    "type": "practice",
+    "sectionTime": "01:43:00",
+
+    "hatmaotNames": ["הטמעת שם הוויה (י-ה-ו-ה)", "הטמעת חותם שלמה — \"הון ועושר בביתו\""]
   },
   {
     "session": 5,
     "title": "חניכה ראשונה — אורות החסדים",
     "topic": "הרחבת פתח הכתר, חיבור לאור עליון",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "initiation"
+    "type": "initiation",
+    "sectionTime": "01:43:00",
+
+    "hatmaotNames": ["חניכה ראשונה — הטמעת אורות החסדים"]
   },
   {
     "session": 6,
     "title": "תרגול — הזרמה דרך הידיים (הצינור)",
     "topic": "משיכת אורות חסדים דרך הכתר, הזרמה דרך כפות הידיים",
     "lectureBasename": "shlomo_hatmaot--intro_protection",
-    "type": "practice"
+    "type": "practice",
+    "sectionTime": "01:43:00",
+
+    "hatmaotNames": ["תרגול חותם — הזרמת אורות חסדים (צינור)"]
   },
   {
     "session": 7,
@@ -56,56 +70,70 @@ const LEARNING_PATH = [
     "title": "סוגי חותמות ומנגנון הפעולה",
     "topic": "תדרים, הרחבת כלים, טרנספורמציה, מילוי",
     "lectureBasename": "shlomo_hatmaot--lecture_2",
-    "type": "theory"
+    "type": "theory",
+    "sectionTime": "00:00:00"
   },
   {
     "session": 9,
     "title": "חניכה שנייה — ממד חמישי",
     "topic": "ביטול חוקי זמן, מקום ומרחק; חניכה בממד החמישי",
     "lectureBasename": "shlomo_hatmaot--lecture_2",
-    "type": "initiation"
+    "type": "initiation",
+    "sectionTime": "01:29:37",
+    "hatmaotNames": ["חניכה שנייה — אורות החסדים (ממד חמישי)", "תרגול הזרמת אורות חסדים דרך הידיים"]
   },
   {
     "session": 10,
     "title": "הפעלת חותם רפואה עם הידיים",
     "topic": "הזרמה לחותם, סיבוב החותם בגוף, ריפוי קבוצתי",
     "lectureBasename": "shlomo_hatmaot--lecture_2",
-    "type": "practice"
+    "type": "practice",
+    "sectionTime": "01:45:48",
+    "hatmaotNames": ["הפעלת חותם רפואה עם הידיים", "הטמעת חותם בגוף — סיבוב החותם", "טיפול קבוצתי בחותם רפואה"]
   },
   {
     "session": 11,
     "title": "רקע — ספירות וכוחות הידיים",
     "topic": "אורות חסדים וגבורות, שבע ספירות תחתונות",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
-    "type": "theory"
+    "type": "theory",
+    "summarySections": ["כוחות הידיים ושבע הספירות התחתונות"]
   },
   {
     "session": 12,
     "title": "תיקון שורשי",
     "topic": "חסימות, פגמים, מנגנון הרחבת כלים",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
-    "type": "theory"
+    "type": "theory",
+    "summarySections": ["מנגנון הרחבת הכלים והתיקון", "חסימות שורשיות ותיקונן"]
   },
   {
     "session": 13,
     "title": "חניכה לגלי תטא",
     "topic": "דמיון מונחה דרך שבעה ממדים, נוסחת אהבה ללא תנאי",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
-    "type": "initiation"
+    "type": "initiation",
+    "summarySections": ["חניכה לגלי תטא"],
+
+    "hatmaotNames": ["חניכה לגלי תטא — דמיון מונחה דרך שבעה ממדים"]
   },
   {
     "session": 14,
     "title": "חניכה שלישית",
     "topic": "חניכה שלישית — צריבת חותמות",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
-    "type": "initiation"
+    "type": "initiation",
+    "summarySections": []
   },
   {
     "session": 15,
     "title": "טכניקת הצריבה",
     "topic": "שם הוויה, הגברת כוונה, צריבה בידיים",
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
-    "type": "practice"
+    "type": "practice",
+    "summarySections": ["טכניקת הצריבה", "ששת החותמות", "שימוש מעשי בחותמות", "טיפול קבוצתי"],
+
+    "hatmaotNames": ["הפעלת חותם ראשונה — הזרמת אורות חסדים לחותם"]
   },
   {
     "session": 16,
@@ -154,6 +182,16 @@ const LEARNING_PATH = [
     "lectureBasename": "shlomo_hatmaot--lecture_3_inscription",
     "type": "seal",
     "sealNumber": "ו"
+  },
+  {
+    "session": 21.4,
+    "title": "הכנה — חיבור לתטא וסקירת חותמות",
+    "topic": "חיבור לגלי תטא, סקירת חותמות חדשים, הדגמת ריפוי אנרגטי",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "practice",
+    "summarySections": ["תרגיל בסיס — התחברות לגלי תטא", "סקירת חותמות קודמים וחותמות חדשים", "הדגמה מעשית עם משתתף — ריפוי אנרגטי"],
+
+    "hatmaotNames": ["תרגיל בסיס — התחברות לגלי תטא", "ריפוי אנרגטי עם מרדכי"]
   },
   {
     "session": 21.5,
@@ -228,6 +266,24 @@ const LEARNING_PATH = [
     "sealNumber": "טו"
   },
   {
+    "session": 24.3,
+    "title": "מדיטציה לזוגיות וניקוי שדות",
+    "topic": "שלוש הדלתות, עיקרון התדר בזוגיות, ניקוי שדות שליליים",
+    "lectureBasename": "shlomo_hatmaot--lecture_4_inscription",
+    "type": "practice",
+    "summarySections": ["עקרון התדר והמשיכה — זוגיות", "ניקוי עמוק — הסרת שאריות שליליות", "חותם שפע וברכה", "סיום — הכרזות"],
+
+    "hatmaotNames": ["מדיטציה לזוגיות — שלוש הדלתות", "ניקוי שדות שליליים"]
+  },
+  {
+    "session": 24.9,
+    "title": "מוחין דגדלות — רקע תיאורטי",
+    "topic": "חניכה למוחין דגדלות, טכנולוגיה קדומה, פירמידות וגילויים מדעיים",
+    "lectureBasename": "shlomo_hatmaot--lecture_5",
+    "type": "theory",
+    "summarySections": ["פתיחה והקדשה", "סיכום חותמות שנלמדו", "מוחין דגדלות — משיכת מאור מעולם עליון", "טכנולוגיה קדומה, פירמידות וגילויים מדעיים"]
+  },
+  {
     "session": 25,
     "title": "חותם מוחין דגדלות",
     "topic": "משיכת מאור מעולמות עליונים",
@@ -244,12 +300,38 @@ const LEARNING_PATH = [
     "sealNumber": "יח"
   },
   {
+    "session": 26.5,
+    "title": "זוגיות, שבת וממד חמישי",
+    "topic": "זוגיות ורצון להשפיע, חינוך, שבת, ממד חמישי",
+    "lectureBasename": "shlomo_hatmaot--lecture_5",
+    "type": "theory",
+    "summarySections": ["זוגיות, חינוך ורצון להשפיע", "שבת וממד חמישי", "סיפורים ודוגמאות אישיות"]
+  },
+  {
+    "session": 26.9,
+    "title": "שינוי נתיב חיים — עקרונות",
+    "topic": "נתיב חיים, הרצון הפנימי, ארבעה שלבים לבקשת שינוי",
+    "lectureBasename": "shlomo_hatmaot--lecture_6",
+    "type": "theory",
+    "summarySections": ["פתיחה", "מהו נתיב חיים", "האם אפשר לשנות את הנתיב", "הרצון הפנימי", "ארבעת השלבים לבקשת שינוי"]
+  },
+  {
     "session": 27,
     "title": "חותם שינוי נתיב חיים",
     "topic": "כיוון חדש בחיים",
     "lectureBasename": "shlomo_hatmaot--lecture_6",
     "type": "seal",
     "sealNumber": "טז"
+  },
+  {
+    "session": 27.5,
+    "title": "מדיטציה — שינוי נתיב",
+    "topic": "תרגיל הכרת הטוב, מדיטציה לשינוי נתיב חיים",
+    "lectureBasename": "shlomo_hatmaot--lecture_6",
+    "type": "practice",
+    "summarySections": ["מדיטציה — שינוי נתיב"],
+
+    "hatmaotNames": ["תרגיל הכרת הטוב", "מדיטציה — שינוי נתיב חיים"]
   },
   {
     "session": 28,
@@ -264,7 +346,8 @@ const LEARNING_PATH = [
     "title": "חותמות מתקדמים",
     "topic": "אויבים, עניות, משפט, הצלחה, שמירת ברכה",
     "lectureBasename": "shlomo_hatmaot--lecture_7",
-    "type": "theory"
+    "type": "theory",
+    "summarySections": ["פתיחה", "גנבה, חמדנות ונפרדות", "קידודי שמות קודש", "חמדנות — \"לא תחמוד\""]
   },
   {
     "session": 30,

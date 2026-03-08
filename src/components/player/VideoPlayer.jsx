@@ -20,10 +20,11 @@ export default function VideoPlayer({
   subtitleBasename,
   posterUrl,
   startTime,
+  autoPlay = false,
   highlightRanges,
   className = '',
 }) {
-  const player = useVideoPlayer({ videoUrl, subtitleBasename, startTime });
+  const player = useVideoPlayer({ videoUrl, subtitleBasename, startTime, autoPlay });
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -37,11 +38,11 @@ export default function VideoPlayer({
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          player.seekRelative(-8);
+          player.seekRelative(-6);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          player.seekRelative(8);
+          player.seekRelative(6);
           break;
         case 'f':
           e.preventDefault();

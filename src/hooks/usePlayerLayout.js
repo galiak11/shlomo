@@ -30,8 +30,8 @@ export function usePlayerLayout() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Stable primitive ID for the scroll effect dep — works for both sessions (number) and lectures (string)
-  const itemId = selectedItem?.session ?? selectedItem?.basename ?? null;
+  // Stable primitive ID for the scroll effect dep — works for sessions (number), lectures (string), and Vimeo items (URL)
+  const itemId = selectedItem?.session ?? selectedItem?.basename ?? selectedItem?.videoUrl ?? null;
 
   // Scroll-linked sticky top: video sits just below fixed navbar; header reveals on scroll up
   useEffect(() => {

@@ -52,6 +52,13 @@ function blockAnchorTime(block, lectureData) {
 function filterByTimestamp(summaryMd, session, sessionGroup, lectureData) {
   const myTime = timeToSec(session.sectionTime);
 
+  // Only the first session in the group with this sectionTime "owns" that summary block.
+  // Later sessions sharing the same timestamp show no summary (they have their own hatmaa content).
+  const firstOwner = sessionGroup.find(
+    (s) => s.sectionTime !== undefined && timeToSec(s.sectionTime) === myTime,
+  );
+  if (firstOwner && firstOwner.session !== session.session) return null;
+
   // Collect sorted unique sectionTimes across the group
   const allTimes = [...new Set(
     sessionGroup.filter(s => s.sectionTime).map(s => timeToSec(s.sectionTime))
@@ -206,7 +213,7 @@ function KnowledgeSection() {
         tabIndex={0}
         onClick={() => setExpanded((e) => !e)}
         onKeyDown={(e) => e.key === 'Enter' && setExpanded((v) => !v)}
-        className="mb-2 pb-2 border-b border-border cursor-pointer hover:bg-accent/30 transition select-none -mx-1 px-1 rounded"
+        className="mb-2 pb-2 border-b border-border cursor-pointer hover:bg-accent/30 transition -mx-1 px-1 rounded"
       >
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
@@ -249,7 +256,7 @@ function KnowledgeSection() {
 
 // ─── SessionRow ──────────────────────────────────────────────────────────────
 
-function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGroup, defaultExpanded, onToggleExpand }) {
+function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGroup, defaultExpanded, onToggleExpand, activeFilter, onClearFilter }) {
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
 
   const toggleExpanded = useCallback(() => {
@@ -286,6 +293,13 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
 
   const config = TYPE_CONFIG[session.type] || TYPE_CONFIG.theory;
   const Icon   = config.icon;
+
+  // Compute play start time for the row play button (used both in onClick and as display label)
+  const playStartTime = seal
+    ? (sealMeta?.hatmaaTime?.startTime ?? undefined)
+    : (session.hatmaotNames?.[0]
+      ? lectureData?.hatmaot?.find(h => h.name === session.hatmaotNames[0])?.startTime
+      : undefined) ?? session.sectionTime ?? undefined;
 
   // Markdown components with time-link interception (for summary timestamps)
   const markdownComponents = useMemo(() => ({
@@ -349,7 +363,7 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
         tabIndex={0}
         onClick={() => { if (!window.getSelection()?.toString()) toggleExpanded(); }}
         onKeyDown={(e) => e.key === 'Enter' && toggleExpanded()}
-        className={`flex items-stretch gap-2 px-3 cursor-pointer hover:bg-accent/50 transition${seal ? ' my-px' : ''}`}
+        className={`flex items-stretch gap-2 px-3 cursor-pointer hover:bg-accent/50 transition group${seal ? ' my-px' : ''}`}
         dir="rtl"
       >
         {/* Session label */}
@@ -375,20 +389,11 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
               <AnnotatedText text={session.title} />
             </p>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const startTime = seal
-                  ? (sealMeta?.hatmaaTime?.startTime ?? undefined)
-                  : (session.hatmaotNames?.[0]
-                    ? lectureData?.hatmaot?.find(h => h.name === session.hatmaotNames[0])?.startTime
-                    : undefined) ?? session.sectionTime ?? undefined;
-                onPlay(session, startTime);
-              }}
+              onClick={(e) => { e.stopPropagation(); onPlay(session, playStartTime); }}
               className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
-              title="הפעל מפגש"
             >
               <Play className="w-3 h-3 fill-current" style={{ transform: 'scaleX(-1)' }} />
-              <span className="hidden sm:inline">הפעל</span>
+              <span className="hidden sm:inline">{playStartTime ? playStartTime.slice(0, 5) : '▶'}</span>
             </button>
           </div>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5 leading-relaxed">
@@ -401,6 +406,16 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
           <Icon className="w-3 h-3" />
           <span className="hidden sm:inline">{config.label}</span>
         </span>
+
+        {/* Clear filter button — appears on hover when a filter is active */}
+        {activeFilter && onClearFilter && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onClearFilter(); }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-muted-foreground hover:text-foreground border border-border/60 hover:border-foreground/30 rounded-full px-1.5 py-0.5 shrink-0 self-center whitespace-nowrap"
+          >
+            הצג הכל
+          </button>
+        )}
 
         {/* Expand chevron */}
         <ChevronDown
@@ -425,9 +440,9 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
                 /* ── Seal session: full seal data + markdown content ── */
                 <div className="space-y-3">
 
-                  {/* mainTitle — shown here when expanded so image doesn't shrink */}
+                  {/* mainTitle — aligned under the seal thumbnail column (w-6 number + w-12 image) */}
                   {seal.content?.mainTitle && (
-                    <p className="text-[6px] text-muted-foreground whitespace-nowrap leading-none">
+                    <p className="text-[9px] text-muted-foreground text-center w-12 mr-7 leading-tight shrink-0 self-start">
                       {seal.content.mainTitle}
                     </p>
                   )}
@@ -552,6 +567,32 @@ function SessionRow({ session, sessionLabel, seals, isPlaying, onPlay, sessionGr
                         <ReactMarkdown components={markdownComponents}>
                           {summaryWithHeadings}
                         </ReactMarkdown>
+                      ) : session.hatmaotNames?.length > 0 && lectureData?.hatmaot ? (
+                        // Show per-hatmaa details when no filtered summary is available
+                        <div className="space-y-2">
+                          {session.hatmaotNames
+                            .map((name) => lectureData.hatmaot.find((h) => h.name === name))
+                            .filter(Boolean)
+                            .map((h, i) => (
+                              <div key={i} className="space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-semibold leading-snug">{h.name}</p>
+                                  {h.startTime && (
+                                    <button
+                                      onClick={() => onPlay(session, h.startTime, { startTime: h.startTime, endTime: h.endTime })}
+                                      className="shrink-0 flex items-center gap-0.5 text-[10px] text-purple-600 hover:underline"
+                                    >
+                                      <Play className="w-2.5 h-2.5 fill-current" style={{ transform: 'scaleX(-1)' }} />
+                                      {h.startTime.slice(0, 5)}
+                                    </button>
+                                  )}
+                                </div>
+                                {h.goal && (
+                                  <p className="text-xs text-muted-foreground leading-relaxed">{h.goal}</p>
+                                )}
+                              </div>
+                            ))}
+                        </div>
                       ) : lectureData?.lecture?.description?.he ? (
                         <p className="text-xs leading-relaxed text-muted-foreground">
                           {lectureData.lecture.description.he}
@@ -883,6 +924,8 @@ export default function LearningPath() {
                             sessionGroup={fullGroupSessions}
                             defaultExpanded={urlSessionNum === session.session}
                             onToggleExpand={handleSessionToggle}
+                            activeFilter={activeFilter}
+                            onClearFilter={activeFilter ? () => handleFilterChange(null) : undefined}
                           />
                         );
                       })}
@@ -1008,14 +1051,14 @@ export default function LearningPath() {
                       <div className="space-y-3 max-h-48 overflow-y-auto">
                         {selectedHatmaot.map((h) => (
                           <div key={h.name} className="space-y-1">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
                               <p className="text-[11px] font-semibold text-foreground leading-snug">{h.name}</p>
                               {h.startTime && (
                                 <button
                                   onClick={() => handleSeek(h.startTime, { startTime: h.startTime, endTime: h.endTime })}
                                   className="shrink-0 text-[10px] text-purple-600 hover:underline flex items-center gap-0.5"
                                 >
-                                  <Play className="w-2.5 h-2.5 fill-current" />
+                                  <Play className="w-2.5 h-2.5 fill-current" style={{ transform: 'scaleX(-1)' }} />
                                   {h.startTime.slice(0, 5)}
                                 </button>
                               )}

@@ -21,6 +21,7 @@
  *   seekRevision    — integer key bump to trigger seek
  *   autoPlay        — boolean
  *   highlightRanges — [{startTime, endTime, color?}] seconds
+ *   videoUrl        — direct video/Vimeo URL (if provided, overrides lectureBasename player)
  *   sealImageUrl    — optional full-width image shown below video
  *   sealImageAlt    — alt text for seal image
  *   children        — below-video scrollable content
@@ -42,6 +43,7 @@ export default function VideoPanel({
   itemTopic,
   headerPlayTime,
   headerPlayRange,
+  videoUrl,
   lectureBasename,
   seekTime,
   seekRevision,
@@ -100,15 +102,28 @@ export default function VideoPanel({
           )}
         </div>
 
-        {/* Video player */}
-        <VideoPlayer
-          key={`${lectureBasename}-${seekRevision}`}
-          videoUrl={getVideoUrl(lectureBasename)}
-          subtitleBasename={lectureBasename}
-          startTime={seekTime}
-          autoPlay={autoPlay}
-          highlightRanges={highlightRanges}
-        />
+        {/* Video player — Vimeo iframe or local VideoPlayer */}
+        {videoUrl?.match(/vimeo\.com\/(\d+)/) ? (
+          <div className="aspect-video w-full rounded overflow-hidden bg-black">
+            <iframe
+              src={`https://player.vimeo.com/video/${videoUrl.match(/vimeo\.com\/(\d+)/)[1]}${autoPlay ? '?autoplay=1' : ''}`}
+              className="w-full h-full"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title={itemTitle}
+            />
+          </div>
+        ) : lectureBasename ? (
+          <VideoPlayer
+            key={`${lectureBasename}-${seekRevision}`}
+            videoUrl={getVideoUrl(lectureBasename)}
+            subtitleBasename={lectureBasename}
+            startTime={seekTime}
+            autoPlay={autoPlay}
+            highlightRanges={highlightRanges}
+          />
+        ) : null}
 
         {/* Optional full-width seal image */}
         {sealImageUrl && (

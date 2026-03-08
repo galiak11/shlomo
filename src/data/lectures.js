@@ -64,7 +64,7 @@ const LECTURES = [
       "en": "General Introduction to Seals of Solomon — Kabbalistic Foundations, Operating Mechanism and Consciousness Transformation"
     },
     "description": {
-      "he": "שיעור מבוא תיאורטי לקורס חותמות שלמה, הכולל הסבר על מקורות החותמות, סיפור שלמה המלך ואשמדאי, תפקיד המוח כמכשיר ריבוב תדרים, הקשר בין תת ההכרה למציאות הנתפסת, מבנה החותמות ואופן הפעלתם, וההבדל בין עבודת תודעה רגילה לעבודה עם חותמות. השיעור עוסק בעיקר ברקע התיאורטי ללא תרגול מעשי.",
+      "he": "שיעור מבוא תיאורטי לקורס חותמות שלמה, הכולל הסבר על מקורות החותמות, סיפור שלמה המלך ואשמ״דאי, תפקיד המוח כמכשיר ריבוב תדרים, הקשר בין תת ההכרה למציאות הנתפסת, מבנה החותמות ואופן הפעלתם, וההבדל בין עבודת תודעה רגילה לעבודה עם חותמות. השיעור עוסק בעיקר ברקע התיאורטי ללא תרגול מעשי.",
       "en": "A theoretical introductory lesson for the Seals of Solomon course, covering the origins of the seals, the story of King Solomon and Ashmedai, the role of the brain as a frequency modulation device, the connection between the subconscious and perceived reality, the structure of the seals and their activation method, and the difference between regular consciousness work and working with seals. The lesson focuses primarily on theoretical background without practical exercises."
     },
     "className": {

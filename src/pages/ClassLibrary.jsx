@@ -4,32 +4,83 @@
  * Route: /ClassLibrary?tab={classKey}
  *
  * Transcribed class (hatmaot): expandable rows → VideoPanel with full 4-tab LectureDetail content.
- * Non-transcribed classes: expandable rows → "הפעל" opens Vimeo in new tab.
+ * Non-transcribed classes: "הפעל" button → VideoPanel with Vimeo iframe embed.
  */
 
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { useClasses, useLectures, useLectureMetadata } from '@/hooks/useData';
+import { useClasses, useLectures, useLectureMetadata, useLearningPath } from '@/hooks/useData';
 import { usePlayerLayout } from '@/hooks/usePlayerLayout';
 import VideoPanel from '@/components/shared/VideoPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Play, BookOpen, Quote, Star, ChevronDown, ExternalLink, Clock } from 'lucide-react';
+import { Play, BookOpen, Quote, Star, ChevronDown, Clock, Zap } from 'lucide-react';
+
+// ─── Session type config (mirrors LearningPath TYPE_CONFIG) ───────────────────
+
+const SESSION_TYPE_LABELS = {
+  theory:     { icon: BookOpen, label: 'תיאוריה', color: 'bg-blue-500/10 text-blue-700 border-blue-500/20' },
+  practice:   { icon: Play,     label: 'תרגול',   color: 'bg-green-500/10 text-green-700 border-green-500/20' },
+  initiation: { icon: Zap,      label: 'חניכה',   color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
+  seal:       { icon: Star,     label: 'חותם',    color: 'bg-purple-500/10 text-purple-700 border-purple-500/20' },
+};
+
+// ─── Session sub-row (inside expanded TranscribedLectureRow) ───────────────────
+
+function LectureSessionSubRow({ session, onPlay }) {
+  const cfg = SESSION_TYPE_LABELS[session.type] || SESSION_TYPE_LABELS.theory;
+  const Icon = cfg.icon;
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-1.5 border-t border-border/20 hover:bg-accent/30 transition"
+      dir="rtl"
+    >
+      <span className="text-[9px] text-muted-foreground font-mono w-6 shrink-0 text-center">
+        {session.session}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[11px] font-medium leading-tight">{session.title}</p>
+          <button
+            onClick={() => onPlay(session.sectionTime ?? '00:00:00')}
+            className="flex items-center gap-0.5 text-[10px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1 py-0.5 rounded hover:bg-purple-50 transition"
+          >
+            <Play className="w-2.5 h-2.5 fill-current" style={{ transform: 'scaleX(-1)' }} />
+            {session.sectionTime ? session.sectionTime.slice(0, 5) : '▶'}
+          </button>
+        </div>
+        {session.topic && (
+          <p className="text-[10px] text-muted-foreground/70 leading-snug truncate">{session.topic}</p>
+        )}
+      </div>
+      <span className={`flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full border ${cfg.color} shrink-0`}>
+        <Icon className="w-2.5 h-2.5" />
+        <span>{cfg.label}</span>
+      </span>
+    </div>
+  );
+}
 
 // ─── Lecture panel below-video content ────────────────────────────────────────
 
-function LecturePanelContent({ metadata, onSeek }) {
-  const defaultTab = metadata?.summary?.he ? 'summary'
-    : metadata?.hatmaot?.length ? 'hatmaot'
-    : metadata?.seals?.length ? 'seals'
-    : 'quotes';
-  const [tab, setTab] = useState(defaultTab);
+function LecturePanelContent({ metadata, onSeek, sessions }) {
+  // Practice + initiation sessions for the hatmaot tab (mirrors LearningPath "הכנה" filter)
+  const hakhanaSessions = useMemo(
+    () => sessions?.filter((s) => s.type === 'practice' || s.type === 'initiation') ?? [],
+    [sessions],
+  );
 
   const hasSummary = !!metadata?.summary?.he;
-  const hasHatmaot = metadata?.hatmaot?.length > 0;
+  const hasHatmaot = hakhanaSessions.length > 0 || (metadata?.hatmaot?.length ?? 0) > 0;
   const hasSeals   = metadata?.seals?.length > 0;
   const hasQuotes  = metadata?.quotes?.length > 0;
+
+  const defaultTab = hasHatmaot ? 'hatmaot'
+    : hasSummary ? 'summary'
+    : hasSeals ? 'seals'
+    : 'quotes';
+  const [tab, setTab] = useState(defaultTab);
 
   const mdComponents = useMemo(() => ({
     a: ({ href, children }) => {
@@ -66,38 +117,52 @@ function LecturePanelContent({ metadata, onSeek }) {
     <div className="border-t border-border/40 pt-3 max-h-[40vh] overflow-y-auto pb-4">
       <Tabs value={tab} onValueChange={setTab} dir="rtl">
         <TabsList className="h-7 w-full mb-2">
-          {hasSummary && <TabsTrigger value="summary"  className="text-xs flex-1 h-6 gap-1"><BookOpen className="w-3 h-3" />תקציר</TabsTrigger>}
           {hasHatmaot && <TabsTrigger value="hatmaot"  className="text-xs flex-1 h-6 gap-1"><Play className="w-3 h-3" />הטמעות</TabsTrigger>}
+          {hasSummary && <TabsTrigger value="summary"  className="text-xs flex-1 h-6 gap-1"><BookOpen className="w-3 h-3" />תקציר</TabsTrigger>}
           {hasSeals   && <TabsTrigger value="seals"    className="text-xs flex-1 h-6 gap-1"><Star className="w-3 h-3" />חותמות</TabsTrigger>}
           {hasQuotes  && <TabsTrigger value="quotes"   className="text-xs flex-1 h-6 gap-1"><Quote className="w-3 h-3" />ציטוטים</TabsTrigger>}
         </TabsList>
+
+        {hasHatmaot && (
+          <TabsContent value="hatmaot" className="mt-0">
+            <div dir="rtl">
+              {hakhanaSessions.length > 0 ? (
+                // Learning-path sessions (same data source as LearningPath "הכנה" view)
+                hakhanaSessions.map((s) => (
+                  <LectureSessionSubRow
+                    key={s.session}
+                    session={s}
+                    onPlay={(startTime) => onSeek(startTime)}
+                  />
+                ))
+              ) : (
+                // Fallback: raw metadata hatmaot cards
+                <div className="space-y-2 px-2">
+                  {metadata.hatmaot.map((h, i) => (
+                    <div key={i} className="border border-border rounded-lg p-3 space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[11px] font-semibold leading-snug">{h.name}</p>
+                        {h.startTime && (
+                          <button onClick={() => onSeek(h.startTime, { startTime: h.startTime, endTime: h.endTime })}
+                            className="shrink-0 flex items-center gap-0.5 text-[10px] text-purple-600 hover:underline">
+                            <Play className="w-2.5 h-2.5 fill-current" style={{ transform: 'scaleX(-1)' }} />
+                            {h.startTime.slice(0, 5)}
+                          </button>
+                        )}
+                      </div>
+                      {h.goal && <p className="text-[10px] text-muted-foreground italic leading-relaxed">{h.goal}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         {hasSummary && (
           <TabsContent value="summary" className="mt-0 px-2">
             <div className="prose prose-sm max-w-none dark:prose-invert text-right" dir="rtl">
               <ReactMarkdown components={mdComponents}>{metadata.summary.he}</ReactMarkdown>
-            </div>
-          </TabsContent>
-        )}
-
-        {hasHatmaot && (
-          <TabsContent value="hatmaot" className="mt-0 px-2">
-            <div className="space-y-2" dir="rtl">
-              {metadata.hatmaot.map((h, i) => (
-                <div key={i} className="border border-border rounded-lg p-3 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] font-semibold leading-snug flex-1">{h.name}</p>
-                    {h.startTime && (
-                      <button onClick={() => onSeek(h.startTime, { startTime: h.startTime, endTime: h.endTime })}
-                        className="shrink-0 flex items-center gap-0.5 text-[10px] text-purple-600 hover:underline">
-                        <Play className="w-2.5 h-2.5 fill-current" />
-                        {h.startTime.slice(0, 5)}
-                      </button>
-                    )}
-                  </div>
-                  {h.goal && <p className="text-[10px] text-muted-foreground italic leading-relaxed">{h.goal}</p>}
-                </div>
-              ))}
             </div>
           </TabsContent>
         )}
@@ -142,8 +207,8 @@ function LecturePanelContent({ metadata, onSeek }) {
             <div dir="rtl">
               {metadata.quotes.map((q, i) => (
                 <div key={i} className="border-b border-border/40 last:border-0 py-2.5 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[10px] font-medium text-primary flex-1">{q.source}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[10px] font-medium text-primary">{q.source}</p>
                     {q.timestamp && (
                       <button onClick={() => onSeek(q.timestamp)}
                         className="shrink-0 flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-primary">
@@ -167,8 +232,9 @@ function LecturePanelContent({ metadata, onSeek }) {
 
 // ─── Transcribed lecture row ───────────────────────────────────────────────────
 
-function TranscribedLectureRow({ lecture, lectureIndex, isPlaying, onPlay }) {
+function TranscribedLectureRow({ lecture, lectureIndex, isPlaying, onPlay, sessions }) {
   const [expanded, setExpanded] = useState(false);
+  const hasSessions = sessions?.length > 0;
   const titleShort = lecture.title.he.replace(/^שיעור \d+:\s+/, '');
 
   return (
@@ -179,9 +245,9 @@ function TranscribedLectureRow({ lecture, lectureIndex, isPlaying, onPlay }) {
       <div
         role="button"
         tabIndex={0}
-        onClick={() => { if (!window.getSelection()?.toString()) setExpanded((e) => !e); }}
-        onKeyDown={(e) => e.key === 'Enter' && setExpanded((v) => !v)}
-        className="flex items-stretch gap-2 px-3 cursor-pointer hover:bg-accent/50 transition"
+        onClick={() => { if (hasSessions && !window.getSelection()?.toString()) setExpanded((e) => !e); }}
+        onKeyDown={(e) => e.key === 'Enter' && hasSessions && setExpanded((v) => !v)}
+        className={`flex items-stretch gap-2 px-3 hover:bg-accent/50 transition ${hasSessions ? 'cursor-pointer' : ''}`}
         dir="rtl"
       >
         {/* Number */}
@@ -198,7 +264,7 @@ function TranscribedLectureRow({ lecture, lectureIndex, isPlaying, onPlay }) {
               className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
             >
               <Play className="w-3 h-3 fill-current" style={{ transform: 'scaleX(-1)' }} />
-              <span className="hidden sm:inline">הפעל</span>
+              <span className="hidden sm:inline">00:00</span>
             </button>
           </div>
           {lecture.description?.he && (
@@ -208,86 +274,67 @@ function TranscribedLectureRow({ lecture, lectureIndex, isPlaying, onPlay }) {
           )}
         </div>
 
-        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 self-center ${expanded ? 'rotate-180' : ''}`} />
+        {hasSessions && (
+          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 self-center ${expanded ? 'rotate-180' : ''}`} />
+        )}
       </div>
 
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="px-4 pb-3 pt-1" dir="rtl">
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
-                {lecture.hatmaotCount > 0 && <span>{lecture.hatmaotCount} הטמעות</span>}
-                {lecture.sealCount > 0    && <span>{lecture.sealCount} חותמות</span>}
-                {lecture.quoteCount > 0   && <span>{lecture.quoteCount} ציטוטים</span>}
+      {hasSessions && (
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="pb-1">
+                {sessions.map((s) => (
+                  <LectureSessionSubRow
+                    key={s.session}
+                    session={s}
+                    onPlay={(startTime) => onPlay(lecture, startTime)}
+                  />
+                ))}
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
 
 // ─── Simple (Vimeo) lecture row ────────────────────────────────────────────────
 
-function SimpleLectureRow({ lecture }) {
-  const [expanded, setExpanded] = useState(false);
-
+function SimpleLectureRow({ lecture, onPlay }) {
   return (
     <div className="border-b border-border/60 last:border-0">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => { if (!window.getSelection()?.toString()) setExpanded((e) => !e); }}
-        onKeyDown={(e) => e.key === 'Enter' && setExpanded((v) => !v)}
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent/30 transition"
-      >
-        <div className="flex-1 min-w-0 text-right" dir="rtl">
-          <p className="text-sm font-medium leading-snug truncate">{lecture.title}</p>
+      <div className="flex items-center gap-2 px-3 py-2.5 hover:bg-accent/30 transition" dir="rtl">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium leading-snug">{lecture.title}</p>
+            <button
+              onClick={() => onPlay(lecture)}
+              className="flex items-center gap-1 text-[11px] font-medium text-purple-600 hover:text-purple-700 shrink-0 px-1.5 py-0.5 rounded hover:bg-purple-50 transition"
+            >
+              <Play className="w-3 h-3 fill-current" style={{ transform: 'scaleX(-1)' }} />
+              <span className="hidden sm:inline">00:00</span>
+            </button>
+          </div>
           {lecture.description && (
             <p className="text-[11px] text-muted-foreground truncate">{lecture.description}</p>
           )}
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
       </div>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.18, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
-          >
-            <div className="px-3 pb-3" dir="rtl">
-              <a
-                href={lecture.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-              >
-                <Play className="w-3 h-3 fill-current" />
-                הפעל שיעור
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
 
 // ─── Simple class grouped by category ─────────────────────────────────────────
 
-function SimpleClassLectures({ lectures }) {
+function SimpleClassLectures({ lectures, onPlay }) {
   const groups = useMemo(() => {
     const map = new Map();
     lectures.forEach((l) => {
@@ -311,7 +358,7 @@ function SimpleClassLectures({ lectures }) {
           )}
           <div className="border border-border rounded-lg overflow-hidden">
             {items.map((lecture, i) => (
-              <SimpleLectureRow key={`${lecture.videoUrl}-${i}`} lecture={lecture} />
+              <SimpleLectureRow key={`${lecture.videoUrl}-${i}`} lecture={lecture} onPlay={onPlay} />
             ))}
           </div>
         </div>
@@ -326,6 +373,7 @@ export default function ClassLibrary() {
   const [searchParams, setSearchParams] = useSearchParams();
   const classes = useClasses();
   const lectures = useLectures();
+  const learningPathSessions = useLearningPath();
 
   const activeTab = searchParams.get('tab') || classes[0]?.key || '';
   const activeClass = classes.find((c) => c.key === activeTab) ?? classes[0];
@@ -337,19 +385,34 @@ export default function ClassLibrary() {
     isDesktop, stickyTop, headerRef, playerRef,
   } = usePlayerLayout();
 
+  // Map lectureBasename → sessions[] (same data as LearningPath)
+  const lectureSessionsMap = useMemo(() => {
+    const map = new Map();
+    learningPathSessions.forEach((s) => {
+      if (!map.has(s.lectureBasename)) map.set(s.lectureBasename, []);
+      map.get(s.lectureBasename).push(s);
+    });
+    return map;
+  }, [learningPathSessions]);
+
   const { data: lectureMetadata } = useLectureMetadata(selectedLecture?.basename ?? null);
 
-  const showPanel = !!selectedLecture && !!activeClass?.isTranscribed;
+  const showPanel = !!selectedLecture;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-4 text-right" dir="rtl">ספריית שיעורים</h1>
 
-      <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} dir="rtl">
-        <TabsList className="w-full mb-6">
+      <Tabs value={activeTab} onValueChange={(v) => { setSearchParams({ tab: v }); handleClose(); }} dir="rtl">
+        <TabsList className="w-full mb-6 h-auto">
           {classes.map((cls) => (
-            <TabsTrigger key={cls.key} value={cls.key} className="flex-1 text-xs">
-              {cls.name}
+            <TabsTrigger key={cls.key} value={cls.key} className="flex-1 text-xs flex-col gap-0 py-2 h-auto">
+              <span className="font-medium leading-tight">{cls.name}</span>
+              {cls.description && (
+                <span className="text-[9px] text-muted-foreground font-normal leading-tight mt-0.5 whitespace-normal text-center">
+                  {cls.description}
+                </span>
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -371,15 +434,16 @@ export default function ClassLibrary() {
                         lectureIndex={i}
                         isPlaying={selectedLecture?.basename === lecture.basename}
                         onPlay={handlePlay}
+                        sessions={lectureSessionsMap.get(lecture.basename)}
                       />
                     ))}
                   </div>
                 ) : (
-                  <SimpleClassLectures lectures={cls.lectures} />
+                  <SimpleClassLectures lectures={cls.lectures} onPlay={handlePlay} />
                 )}
               </div>
 
-              {/* Video panel — transcribed classes only */}
+              {/* Video panel — all classes */}
               {showPanel && (
                 <VideoPanel
                   isDesktop={isDesktop}
@@ -388,15 +452,22 @@ export default function ClassLibrary() {
                   playerRef={playerRef}
                   onClose={handleClose}
                   onSeek={handleSeek}
-                  parentTitle={cls.name}
+                  parentTitle={activeClass?.name}
                   itemTitle={selectedLecture.title?.he ?? selectedLecture.title}
-                  lectureBasename={selectedLecture.basename}
+                  videoUrl={selectedLecture.videoUrl ?? null}
+                  lectureBasename={selectedLecture.basename ?? null}
                   seekTime={seekTime}
                   seekRevision={seekRevision}
                   autoPlay={autoPlay}
                   highlightRanges={selectedHighlight ? [selectedHighlight] : undefined}
                 >
-                  <LecturePanelContent metadata={lectureMetadata} onSeek={handleSeek} />
+                  {activeClass?.isTranscribed && (
+                    <LecturePanelContent
+                      metadata={lectureMetadata}
+                      onSeek={handleSeek}
+                      sessions={lectureSessionsMap.get(selectedLecture?.basename)}
+                    />
+                  )}
                 </VideoPanel>
               )}
             </div>

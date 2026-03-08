@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   {
     key: 'classes',
     label: 'קורסים',
-    href: null,
+    href: createPageUrl('ClassLibrary'),
     matchPaths: ['/ClassLibrary'],
     submenu: [
       { label: 'חותמות שלמה - הטמעות', href: createPageUrl('ClassLibrary') + '?tab=hatmaot' },
@@ -235,7 +235,8 @@ export default function Navbar() {
                     >
                       {hasSubmenu ? (
                         <>
-                          <button
+                          <Link
+                            to={item.href ?? '#'}
                             className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               active
                                 ? 'text-primary bg-primary/5'
@@ -244,7 +245,7 @@ export default function Navbar() {
                           >
                             {item.label}
                             <ChevronDown className="h-3.5 w-3.5" />
-                          </button>
+                          </Link>
                           <DesktopDropdown
                             items={item.submenu}
                             isOpen={activeDropdown === item.key}

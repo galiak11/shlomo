@@ -3,6 +3,7 @@ import SealDetail from './pages/SealDetail';
 import LearningPath from './pages/LearningPath';
 import ClassLibrary from './pages/ClassLibrary';
 import LectureDetail from './pages/LectureDetail';
+import Test from './pages/Test';
 import __Layout from './Layout.jsx';
 
 export const PAGES = {
@@ -11,6 +12,7 @@ export const PAGES = {
     "LearningPath": LearningPath,
     "ClassLibrary": ClassLibrary,
     "LectureDetail": LectureDetail,
+    "Test": Test,
 };
 
 export const pagesConfig = {

@@ -211,3 +211,4 @@ node_modules/
 .DS_Store
 
 
+src/data/videos/*.mp4

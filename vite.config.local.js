@@ -8,9 +8,9 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LECTURES_ROOT = path.resolve(__dirname, '../../lectures');
+const VIDEOS_ROOT = process.env.VIDEOS_ROOT ?? path.resolve(__dirname, 'src/data/videos');
 
-// Vite plugin to serve /videos/{basename}.mp4 from the lectures directory
+// Vite plugin to serve /videos/{basename}.mp4 from src/data/videos/
 function serveVideos() {
   return {
     name: 'serve-lecture-videos',
@@ -19,44 +19,31 @@ function serveVideos() {
         const filename = req.url.replace(/^\//, '').split('?')[0];
         if (!filename.endsWith('.mp4')) return next();
 
-        // Search for the MP4 in any lecture subdirectory
-        const basename = filename.replace(/\.mp4$/, '');
-        const classDir = basename.split('--')[0]; // e.g. "shlomo_hatmaot"
-        const classPath = path.join(LECTURES_ROOT, classDir);
-        if (!fs.existsSync(classPath)) return next();
+        const filePath = path.join(VIDEOS_ROOT, filename);
+        if (!fs.existsSync(filePath)) return next();
 
-        // Find the file in */player/{basename}.mp4
-        const dirs = fs.readdirSync(classPath);
-        for (const dir of dirs) {
-          const filePath = path.join(classPath, dir, 'player', filename);
-          if (fs.existsSync(filePath)) {
-            const stat = fs.statSync(filePath);
-            const range = req.headers.range;
+        const stat = fs.statSync(filePath);
+        const range = req.headers.range;
 
-            if (range) {
-              // Support range requests for video seeking
-              const parts = range.replace(/bytes=/, '').split('-');
-              const start = parseInt(parts[0], 10);
-              const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-              res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': end - start + 1,
-                'Content-Type': 'video/mp4',
-              });
-              fs.createReadStream(filePath, { start, end }).pipe(res);
-            } else {
-              res.writeHead(200, {
-                'Content-Length': stat.size,
-                'Content-Type': 'video/mp4',
-                'Accept-Ranges': 'bytes',
-              });
-              fs.createReadStream(filePath).pipe(res);
-            }
-            return;
-          }
+        if (range) {
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': end - start + 1,
+            'Content-Type': 'video/mp4',
+          });
+          fs.createReadStream(filePath, { start, end }).pipe(res);
+        } else {
+          res.writeHead(200, {
+            'Content-Length': stat.size,
+            'Content-Type': 'video/mp4',
+            'Accept-Ranges': 'bytes',
+          });
+          fs.createReadStream(filePath).pipe(res);
         }
-        next();
       });
     },
   };
